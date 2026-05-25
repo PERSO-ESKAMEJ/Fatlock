@@ -170,7 +170,7 @@ export default function Welcome() {
           <h1 className="font-display text-5xl uppercase tracking-widest mb-2" style={{ color: 'var(--blue-bright)' }}>
             FAT<span style={{ color: 'var(--cyan)' }}>LOCK</span>
           </h1>
-          <p className="text-[var(--muted)]">Réveillez votre Ego Abdominal</p>
+          <p className="text-[var(--muted)]">Réveillez et sublimez votre Ego Abdominal</p>
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button size="lg" onClick={() => navigate('/dashboard')}>
@@ -192,10 +192,10 @@ export default function Welcome() {
           <h1 className="font-display text-6xl md:text-8xl uppercase tracking-widest mb-3" style={{ color: 'var(--ink)' }}>
             FAT<span style={{ background: 'linear-gradient(to right, var(--blue), var(--cyan))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>LOCK</span>
           </h1>
-          <p className="text-[var(--muted)] text-lg">Réveillez votre Ego Abdominal</p>
+          <p className="text-[var(--muted)] text-lg">Réveillez et sublimez votre Ego Abdominal</p>
           <p className="text-xs text-[var(--muted2)] mt-2">Challenge de transformation 8 semaines — groupe — mise en jeu</p>
           <p className="text-xs mt-3 font-bold uppercase tracking-wider" style={{ color: 'var(--red)' }}>
-            L'IA analyse ta transformation chaque semaine. Les tricheurs financent les vrais.
+            L'IA analyse ta transformation chaque semaine. Les tricheurs n'ont qu'à bien se tenir.
           </p>
         </div>
 
@@ -650,7 +650,7 @@ export default function Welcome() {
             En participant, tu t'engages sur l'honneur à respecter ton rythme.
             <span className="font-bold" style={{ color: 'var(--ink)' }}> L'IA analyse ta transformation chaque semaine </span>
             et pénalise les scores qui ne collent pas avec les déclarations.
-            Les tricheurs ne gagnent pas — ils financent ceux qui ont joué le jeu.
+            Les tricheurs n'ont qu'à bien se tenir.
           </div>
 
           <Button
