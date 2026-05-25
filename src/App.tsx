@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useProfileStore } from './store/useProfileStore';
+import { setupSupabase } from './lib/supabase';
 import Welcome from './routes/Welcome';
 import Dashboard from './routes/Dashboard';
 import Rituals from './routes/Rituals';
@@ -25,6 +27,12 @@ export default function App() {
   const profile = useProfileStore((s) => s.profile);
   const challenge = useProfileStore((s) => s.challenge);
   const isSetup = !!profile && !!challenge;
+
+  useEffect(() => {
+    if (challenge?.supabaseUrl && challenge?.supabaseAnonKey) {
+      setupSupabase(challenge.supabaseUrl, challenge.supabaseAnonKey);
+    }
+  }, [challenge?.supabaseUrl, challenge?.supabaseAnonKey]);
 
   return (
     <ToastProvider>

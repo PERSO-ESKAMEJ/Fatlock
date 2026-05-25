@@ -6,6 +6,7 @@ import { RecapFile, MasterLeaderboard, LeaderboardEntry } from '../../types';
 import { calcCurrentStreak, getTier, calcCompositeScore } from '../../lib/scoring';
 import { getCurrentWeek } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
+import { supabase } from '../../lib/supabase';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import DramaReveal from './DramaReveal';
@@ -23,6 +24,27 @@ export default function AdminSync() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentWeek = getCurrentWeek(challenge.startDate);
+
+  async function handleFetchRecapsFromSupabase() {
+    const sb = supabase();
+    if (!sb) { showToast('Supabase non configuré', 'error'); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await sb
+        .from('recaps')
+        .select('data')
+        .eq('challenge_id', challenge.id)
+        .eq('week_number', currentWeek);
+      if (error || !data?.length) { showToast('Aucun récap disponible sur Supabase', 'error'); return; }
+      const parsed: RecapFile[] = data.map((row: { data: RecapFile }) => row.data);
+      setRecaps(parsed);
+      showToast(`${parsed.length} récap(s) chargé(s) depuis Supabase`, 'success');
+    } catch {
+      showToast('Erreur Supabase', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -131,6 +153,15 @@ export default function AdminSync() {
       a.click();
       URL.revokeObjectURL(url);
 
+      // Push to Supabase if configured
+      const sb = supabase();
+      if (sb) {
+        await sb.from('master_leaderboards').upsert(
+          { challenge_id: challenge.id, updated_at: lb.updatedAt, data: lb },
+          { onConflict: 'challenge_id' }
+        );
+      }
+
       showToast('Classement généré et exporté !', 'success');
     } catch (err) {
       showToast('Erreur lors de la génération', 'error');
@@ -148,8 +179,18 @@ export default function AdminSync() {
         </div>
 
         <div className="space-y-3">
+          {supabase() && (
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={handleFetchRecapsFromSupabase}
+              disabled={loading}
+            >
+              ↓ Charger les récaps depuis Supabase (S{currentWeek})
+            </Button>
+          )}
           <div>
-            <label>Charger les récaps de la team</label>
+            <label>{supabase() ? 'Ou charger manuellement (.json)' : 'Charger les récaps de la team'}</label>
             <input
               ref={fileRef}
               type="file"

@@ -32,6 +32,8 @@ export default function Settings() {
 
   const [age, setAge] = useState(profile?.age?.toString() ?? '');
   const [apiKey, setApiKey] = useState(challenge?.anthropicApiKey ?? '');
+  const [supabaseUrl, setSupabaseUrl] = useState(challenge?.supabaseUrl ?? '');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(challenge?.supabaseAnonKey ?? '');
   const [trainingDays, setTrainingDays] = useState(profile?.trainingDays ?? {
     monday: null, tuesday: null, wednesday: null, thursday: null,
     friday: null, saturday: null, sunday: null,
@@ -55,6 +57,14 @@ export default function Settings() {
   function handleSaveApiKey() {
     updateChallenge({ anthropicApiKey: apiKey.trim() || undefined });
     showToast('Clé API sauvegardée', 'success');
+  }
+
+  function handleSaveSupabase() {
+    updateChallenge({
+      supabaseUrl: supabaseUrl.trim() || undefined,
+      supabaseAnonKey: supabaseAnonKey.trim() || undefined,
+    });
+    showToast('Supabase configuré', 'success');
   }
 
   function handleExportData() {
@@ -167,11 +177,13 @@ export default function Settings() {
             style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
             onClick={() => {
               const base = window.location.origin + import.meta.env.BASE_URL;
-              const link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}`;
+              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}`;
+              if (challenge.supabaseUrl) link += `&sb_url=${encodeURIComponent(challenge.supabaseUrl)}`;
+              if (challenge.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(challenge.supabaseAnonKey)}`;
               navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));
             }}
           >
-            ?join={challenge.groupCode}&gname={encodeURIComponent(challenge.groupName)}
+            ?join={challenge.groupCode}&gname={encodeURIComponent(challenge.groupName)}{challenge.supabaseUrl ? ' +supabase' : ''}
           </button>
           <p className="text-xs text-[var(--muted2)] mt-1">Clique pour copier. Partage ce lien aux participants.</p>
         </div>
@@ -192,6 +204,31 @@ export default function Settings() {
             className="mb-2"
           />
           <Button size="sm" onClick={handleSaveApiKey}>Enregistrer la clé</Button>
+        </div>
+      )}
+
+      {/* Supabase (admin only) */}
+      {profile.isAdmin && (
+        <div className="panel p-4 mb-4">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Supabase — Sync photos & classement</div>
+          <p className="text-xs text-[var(--muted2)] mb-3">
+            Permet le partage automatique des photos et du classement entre participants. URL + clé anon disponibles dans ton projet Supabase → Settings → API.
+          </p>
+          <div className="space-y-2 mb-2">
+            <input
+              type="text"
+              value={supabaseUrl}
+              onChange={(e) => setSupabaseUrl(e.target.value)}
+              placeholder="https://xxxx.supabase.co"
+            />
+            <input
+              type="password"
+              value={supabaseAnonKey}
+              onChange={(e) => setSupabaseAnonKey(e.target.value)}
+              placeholder="eyJhbGci... (anon key)"
+            />
+          </div>
+          <Button size="sm" onClick={handleSaveSupabase}>Enregistrer</Button>
         </div>
       )}
 

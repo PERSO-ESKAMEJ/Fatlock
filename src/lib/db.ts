@@ -1,5 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { WeeklyPhoto } from '../types';
+import { supabase } from './supabase';
+import { useProfileStore } from '../store/useProfileStore';
 
 interface StoredPhoto extends WeeklyPhoto {
   key: string;
@@ -36,10 +38,51 @@ function stripKey(record: StoredPhoto): WeeklyPhoto {
   return photo as WeeklyPhoto;
 }
 
+function storagePath(challengeId: string, userId: string, weekNumber: number): string {
+  return `${challengeId}/${userId}/week${weekNumber}.json`;
+}
+
+async function uploadPhotoToSupabase(photo: WeeklyPhoto): Promise<void> {
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  if (!sb || !challengeId) return;
+
+  const json = JSON.stringify(photo);
+  const blob = new Blob([json], { type: 'application/json' });
+  const path = storagePath(challengeId, photo.userId, photo.weekNumber);
+
+  await sb.storage.from('fatlock-photos').upload(path, blob, {
+    upsert: true,
+    contentType: 'application/json',
+  });
+}
+
+async function downloadPhotoFromSupabase(
+  userId: string,
+  weekNumber: number
+): Promise<WeeklyPhoto | null> {
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  if (!sb || !challengeId) return null;
+
+  const path = storagePath(challengeId, userId, weekNumber);
+  const { data, error } = await sb.storage.from('fatlock-photos').download(path);
+  if (error || !data) return null;
+
+  try {
+    const text = await data.text();
+    return JSON.parse(text) as WeeklyPhoto;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveWeeklyPhoto(photo: WeeklyPhoto): Promise<void> {
   const db = await getDB();
   const record: StoredPhoto = { ...photo, key: photoKey(photo.userId, photo.weekNumber) };
   await db.put('weeklyPhotos', record);
+  // Fire-and-forget: don't block the UI if Supabase is slow/unavailable
+  uploadPhotoToSupabase(photo).catch(console.warn);
 }
 
 export async function getWeeklyPhoto(
@@ -48,8 +91,16 @@ export async function getWeeklyPhoto(
 ): Promise<WeeklyPhoto | null> {
   const db = await getDB();
   const record = await db.get('weeklyPhotos', photoKey(userId, weekNumber));
-  if (!record) return null;
-  return stripKey(record);
+  if (record) return stripKey(record);
+
+  // Fallback: fetch from Supabase (works for other participants' photos)
+  const remote = await downloadPhotoFromSupabase(userId, weekNumber);
+  if (remote) {
+    // Cache locally for next time
+    const stored: StoredPhoto = { ...remote, key: photoKey(userId, weekNumber) };
+    await db.put('weeklyPhotos', stored).catch(() => undefined);
+  }
+  return remote;
 }
 
 export async function getAllPhotosForUser(userId: string): Promise<WeeklyPhoto[]> {

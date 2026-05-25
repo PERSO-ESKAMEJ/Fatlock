@@ -5,6 +5,7 @@ import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { getCurrentWeek } from '../store/useChallengeStore';
 import { generateRecapFile, exportRecapAsFile } from '../lib/recap';
 import { getPhotosByWeek } from '../lib/db';
+import { supabase } from '../lib/supabase';
 import RankingRow from '../components/leaderboard/RankingRow';
 import AdminSync from '../components/leaderboard/AdminSync';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -22,6 +23,7 @@ export default function Leaderboard() {
 
   const [tab, setTab] = useState<'live' | 'sync'>('live');
   const [exportLoading, setExportLoading] = useState(false);
+  const [lbLoading, setLbLoading] = useState(false);
 
   const currentWeek = getCurrentWeek(challenge.startDate);
 
@@ -43,12 +45,47 @@ export default function Leaderboard() {
         weeklyScores.filter((s) => s.userId === profile.id),
       );
       exportRecapAsFile(recap);
-      showToast('Récap exporté !', 'success');
+
+      // Also push to Supabase if configured (non-blocking)
+      const sb = supabase();
+      if (sb) {
+        sb.from('recaps').upsert({
+          challenge_id: challenge.id,
+          user_id: profile.id,
+          week_number: currentWeek,
+          exported_at: new Date().toISOString(),
+          data: recap,
+        }, { onConflict: 'challenge_id,user_id,week_number' }).then(({ error }) => {
+          if (error) console.warn('Supabase recap push failed:', error);
+        });
+      }
+
+      showToast(sb ? 'Récap exporté et synchronisé !' : 'Récap exporté !', 'success');
     } catch (err) {
       showToast('Erreur lors de l\'export', 'error');
       console.error(err);
     } finally {
       setExportLoading(false);
+    }
+  }
+
+  async function handleFetchMasterFromSupabase() {
+    const sb = supabase();
+    if (!sb) { showToast('Supabase non configuré', 'error'); return; }
+    setLbLoading(true);
+    try {
+      const { data, error } = await sb
+        .from('master_leaderboards')
+        .select('data')
+        .eq('challenge_id', challenge.id)
+        .single();
+      if (error || !data) { showToast('Aucun classement disponible', 'error'); return; }
+      setMasterLeaderboard(data.data as MasterLeaderboard);
+      showToast('Classement mis à jour !', 'success');
+    } catch {
+      showToast('Erreur Supabase', 'error');
+    } finally {
+      setLbLoading(false);
     }
   }
 
@@ -127,13 +164,18 @@ export default function Leaderboard() {
                 />
               ))}
               {!profile.isAdmin && (
-                <div className="mt-3">
+                <div className="mt-3 flex gap-2 flex-wrap">
+                  {supabase() && (
+                    <Button size="sm" variant="ghost" onClick={handleFetchMasterFromSupabase} loading={lbLoading}>
+                      ↻ Sync Supabase
+                    </Button>
+                  )}
                   <input type="file" accept=".json" onChange={handleImportMaster} className="hidden" id="import-master-2" />
                   <button
                     onClick={() => document.getElementById('import-master-2')?.click()}
                     className="text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
                   >
-                    Mettre à jour avec un nouveau fichier master →
+                    Importer fichier master →
                   </button>
                 </div>
               )}

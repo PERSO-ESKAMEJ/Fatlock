@@ -82,6 +82,8 @@ export interface ChallengeConfig {
   adminId: string;
   participantIds: string[];
   anthropicApiKey?: string;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
   challengeType?: ChallengeType;
   customSettings?: CustomChallengeSettings;
 }

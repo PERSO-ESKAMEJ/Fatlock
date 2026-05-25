@@ -45,6 +45,8 @@ export default function Welcome() {
   const isAdding = searchParams.get('add') === '1';
   const joinParam = (searchParams.get('join') ?? '').toUpperCase();
   const gnameParam = decodeURIComponent(searchParams.get('gname') ?? '');
+  const sbUrlParam = decodeURIComponent(searchParams.get('sb_url') ?? '');
+  const sbKeyParam = decodeURIComponent(searchParams.get('sb_key') ?? '');
   const hasJoinLink = joinParam.length === 6;
 
   const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
@@ -150,6 +152,8 @@ export default function Welcome() {
       participantIds: [profileId],
       challengeType,
       customSettings: challengeType === 'custom' ? customSettings : undefined,
+      supabaseUrl: sbUrlParam || undefined,
+      supabaseAnonKey: sbKeyParam || undefined,
     };
 
     addEntry(newProfile, challenge);
