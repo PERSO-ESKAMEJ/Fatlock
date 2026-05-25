@@ -20,9 +20,13 @@ const DAY_TYPE_LABELS: Record<DayType, string> = {
 
 export default function Rituals() {
   const profile = useProfileStore((s) => s.profile)!;
+  const challenge = useProfileStore((s) => s.challenge)!;
   const { upsertDailyLog, getDailyLog } = useLogStore();
   const { isCodeConfirmed } = useChallengeStore();
   const { showToast } = useToast();
+
+  const isCustom = challenge.challengeType === 'custom';
+  const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
   const today = getTodayStr();
   const confirmed = isCodeConfirmed(today);
@@ -36,12 +40,18 @@ export default function Rituals() {
   const defaultDayType: DayType = profile.trainingDays[dowMap[dow]] ?? 'repos';
   const dayType: DayType = existingLog?.dayType ?? defaultDayType;
 
-  const rituals = getRitualsForDay(dayType);
+  const rituals = isCustom && customRituals
+    ? customRituals.map((r) => ({ id: r.id, labelM: r.label, labelF: r.label, points: r.points * 10 }))
+    : getRitualsForDay(dayType);
+
   const ritualState: Record<string, boolean> = existingLog?.rituals ?? {};
   const [weight, setWeight] = useState(existingLog?.weightKg?.toString() ?? '');
+  const [customMetric, setCustomMetric] = useState(existingLog?.customMetricValue?.toString() ?? '');
 
-  const earnedPts = existingLog ? calcDayRitualPoints(existingLog, profile.intensity) : 0;
-  const maxPts = Math.round(getMaxPointsForDay(dayType) * INTENSITY_MULTIPLIER[profile.intensity]);
+  const earnedPts = existingLog ? calcDayRitualPoints(existingLog, profile.intensity, customRituals ?? undefined) : 0;
+  const maxPts = isCustom && customRituals
+    ? Math.round(customRituals.reduce((s, r) => s + r.points * 10, 0) * INTENSITY_MULTIPLIER[profile.intensity])
+    : Math.round(getMaxPointsForDay(dayType) * INTENSITY_MULTIPLIER[profile.intensity]);
   const completedCount = Object.values(ritualState).filter(Boolean).length;
 
   function toggleRitual(key: string, currentValue: boolean) {
@@ -51,31 +61,35 @@ export default function Rituals() {
       userId: profile.id,
       date: today,
       codeConfirmed: true,
-      dayType,
+      dayType: isCustom ? null : dayType,
       rituals: newRituals,
       weightKg: weight ? parseFloat(weight) : undefined,
+      customMetricValue: customMetric ? parseFloat(customMetric) : undefined,
     };
     upsertDailyLog(updatedLog);
-
     if (!currentValue) {
-      const pts = Math.round((rituals.find((r) => r.id === key)?.points ?? 0) * INTENSITY_MULTIPLIER[profile.intensity]);
-      showToast(`+${pts} pts — ${rituals.find((r) => r.id === key)?.labelM ?? ''}`, 'success');
+      const ritual = rituals.find((r) => r.id === key);
+      const pts = Math.round((ritual?.points ?? 0) * INTENSITY_MULTIPLIER[profile.intensity]);
+      showToast(`+${pts} pts — ${ritual?.labelM ?? ''}`, 'success');
     }
   }
 
-  function handleWeightSave() {
-    if (!weight) return;
+  function handleSaveMetrics() {
     const updatedLog = {
       userId: profile.id,
       date: today,
       codeConfirmed: confirmed,
-      dayType,
+      dayType: isCustom ? null : dayType,
       rituals: ritualState,
-      weightKg: parseFloat(weight),
+      weightKg: weight ? parseFloat(weight) : undefined,
+      customMetricValue: customMetric ? parseFloat(customMetric) : undefined,
     };
     upsertDailyLog(updatedLog);
-    showToast('Poids enregistré', 'success');
+    showToast('Enregistré', 'success');
   }
+
+  const trackWeight = !isCustom || (challenge.customSettings?.trackWeight ?? true);
+  const customMetricLabel = challenge.customSettings?.customMetricLabel;
 
   return (
     <PageWrapper>
@@ -84,7 +98,8 @@ export default function Rituals() {
         <div>
           <h1 className="font-display text-2xl uppercase tracking-wider">Rituels du jour</h1>
           <div className="text-xs text-[var(--muted)] mt-1">
-            {today} · <span className="text-[var(--ink)]">{DAY_TYPE_LABELS[dayType]}</span>
+            {today}
+            {!isCustom && <> · <span className="text-[var(--ink)]">{DAY_TYPE_LABELS[dayType]}</span></>}
           </div>
         </div>
         <div className="text-right">
@@ -94,10 +109,7 @@ export default function Rituals() {
       </div>
 
       {!confirmed ? (
-        <div
-          className="panel p-4 text-center"
-          style={{ borderColor: 'var(--red)' }}
-        >
+        <div className="panel p-4 text-center" style={{ borderColor: 'var(--red)' }}>
           <div className="text-2xl mb-2">🔐</div>
           <div className="font-bold text-[var(--ink)] mb-1">Rituels verrouillés</div>
           <p className="text-sm text-[var(--muted)]">Confirme le code du jour sur le Dashboard pour débloquer.</p>
@@ -108,6 +120,9 @@ export default function Rituals() {
             const done = ritualState[ritual.id] ?? false;
             const label = profile.sex === 'F' ? ritual.labelF : ritual.labelM;
             const pts = Math.round(ritual.points * INTENSITY_MULTIPLIER[profile.intensity]);
+            const isRequired = isCustom
+              ? (customRituals?.find((r) => r.id === ritual.id)?.required ?? false)
+              : false;
 
             return (
               <button
@@ -127,6 +142,7 @@ export default function Rituals() {
                 </div>
                 <span className={`flex-1 text-sm ${done ? 'line-through text-[var(--muted)]' : 'text-[var(--ink)]'}`}>
                   {label}
+                  {isRequired && !done && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--gold)' }}>★ requis</span>}
                 </span>
                 <span
                   className="text-xs font-mono font-bold px-2 py-0.5 rounded"
@@ -143,34 +159,42 @@ export default function Rituals() {
         </div>
       )}
 
-      {/* Weight log */}
-      <div className="mt-6 panel p-4">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">
-          Pesée du jour (optionnelle)
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            step="0.1"
-            placeholder="80.5 kg"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            className="flex-1"
-            min="30" max="250"
-          />
+      {/* Metrics */}
+      <div className="mt-6 panel p-4 space-y-3">
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Métriques du jour</div>
+        {trackWeight && (
+          <div className="flex gap-2">
+            <input
+              type="number" step="0.1" placeholder="Poids (kg)"
+              value={weight} onChange={(e) => setWeight(e.target.value)}
+              className="flex-1" min="30" max="250"
+            />
+          </div>
+        )}
+        {customMetricLabel && (
+          <div className="flex gap-2">
+            <input
+              type="number" step="0.1"
+              placeholder={customMetricLabel}
+              value={customMetric} onChange={(e) => setCustomMetric(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+        )}
+        {(trackWeight || customMetricLabel) && (
           <button
-            onClick={handleWeightSave}
-            disabled={!weight}
-            className="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40"
+            onClick={handleSaveMetrics}
+            disabled={!weight && !customMetric}
+            className="w-full px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40"
             style={{ background: 'var(--blue)', color: 'white' }}
           >
             Enregistrer
           </button>
-        </div>
+        )}
       </div>
 
       {/* Progress bar */}
-      {confirmed && (
+      {confirmed && rituals.length > 0 && (
         <div className="mt-4 panel2 p-3">
           <div className="flex justify-between text-xs text-[var(--muted)] mb-2">
             <span>{completedCount}/{rituals.length} rituels validés</span>

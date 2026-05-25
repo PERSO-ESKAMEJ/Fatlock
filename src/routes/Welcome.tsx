@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { calculateTargets, ACTIVITY_LEVELS } from '../lib/nutrition';
-import { UserProfile, ChallengeConfig, Sex, Intensity, DayType } from '../types';
+import {
+  UserProfile, ChallengeConfig, Sex, Intensity, DayType,
+  ChallengeType, CustomRitual, CustomChallengeSettings,
+  FATLOCK_DEFAULT_CUSTOM_RITUALS,
+} from '../types';
 import Button from '../components/ui/Button';
 
 function generateId(len: number): string {
@@ -40,8 +44,21 @@ export default function Welcome() {
   const [searchParams] = useSearchParams();
   const isAdding = searchParams.get('add') === '1';
 
-  const [step, setStep] = useState<'landing' | 'profile' | 'confirm-nutrition' | 'challenge'>('landing');
+  const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>('landing');
   const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [challengeType, setChallengeType] = useState<ChallengeType>('fatlock');
+  const [customSettings, setCustomSettings] = useState<CustomChallengeSettings>({
+    description: '',
+    durationWeeks: 8,
+    trackWeight: true,
+    weightDirection: 'down',
+    trackBodyFat: true,
+    trackPhotos: 'required',
+    nutritionEnabled: true,
+    caloricDirection: 'deficit',
+    rituals: FATLOCK_DEFAULT_CUSTOM_RITUALS.map((r) => ({ ...r })),
+    aiAnalysisEnabled: true,
+  });
 
   // Profile fields
   const [sex, setSex] = useState<Sex>('M');
@@ -67,7 +84,31 @@ export default function Welcome() {
 
   function handleProfileSave() {
     if (!name || !age || !height || !weight) return;
-    setStep('confirm-nutrition');
+    if (challengeType === 'custom') {
+      setStep('custom-setup');
+    } else {
+      setStep('confirm-nutrition');
+    }
+  }
+
+  function updateRitual(index: number, updates: Partial<CustomRitual>) {
+    setCustomSettings((s) => {
+      const rituals = [...s.rituals];
+      rituals[index] = { ...rituals[index], ...updates };
+      return { ...s, rituals };
+    });
+  }
+
+  function removeRitual(index: number) {
+    setCustomSettings((s) => ({ ...s, rituals: s.rituals.filter((_, i) => i !== index) }));
+  }
+
+  function addRitual() {
+    if (customSettings.rituals.length >= 10) return;
+    setCustomSettings((s) => ({
+      ...s,
+      rituals: [...s.rituals, { id: `custom_${Date.now()}`, label: '', points: 1 as const, required: false }],
+    }));
   }
 
   function handleCreateChallenge() {
@@ -90,18 +131,22 @@ export default function Welcome() {
     };
 
     const groupCode = mode === 'create' ? generateId(6) : joinCode.toUpperCase().trim();
-    // groupSecret = groupCode so all devices derive the same daily code from the same value
     const groupSecret = groupCode;
+    const defaultName = challengeType === 'fatlock'
+      ? `FATLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`
+      : `CUSTOMLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`;
 
     const challenge: ChallengeConfig = {
       id: crypto.randomUUID(),
-      groupName: groupName.trim() || `FATLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`,
+      groupName: groupName.trim() || defaultName,
       groupCode,
       groupSecret,
       startDate,
       stakeAmount: parseFloat(stake),
       adminId: profileId,
       participantIds: [profileId],
+      challengeType,
+      customSettings: challengeType === 'custom' ? customSettings : undefined,
     };
 
     addEntry(newProfile, challenge);
@@ -149,12 +194,49 @@ export default function Welcome() {
         </div>
 
         <div className="flex flex-col gap-3 w-full max-w-xs">
-          <Button size="lg" onClick={() => { setMode('create'); setStep('profile'); }}>
+          <Button size="lg" onClick={() => { setMode('create'); setStep('type-select'); }}>
             Créer un challenge
           </Button>
           <Button size="lg" variant="ghost" onClick={() => { setMode('join'); setStep('profile'); }}>
             Rejoindre un challenge
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Type selector (create mode only)
+  if (step === 'type-select') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 animate-fade-in">
+        <button onClick={() => setStep('landing')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-8 self-start ml-4">← Retour</button>
+        <div className="text-center mb-10 w-full max-w-sm">
+          <h1 className="font-display text-3xl uppercase tracking-wider mb-2">Type de challenge</h1>
+          <p className="text-sm text-[var(--muted)]">Choisis le format de ton challenge.</p>
+        </div>
+        <div className="flex flex-col gap-3 w-full max-w-sm">
+          <button
+            onClick={() => { setChallengeType('fatlock'); setStep('profile'); }}
+            className="panel p-5 text-left rounded-xl transition-all hover:border-[var(--blue)]"
+            style={{ border: '1px solid var(--border)' }}
+          >
+            <div className="font-display text-xl uppercase tracking-wider mb-1" style={{ color: 'var(--blue-bright)' }}>
+              FAT<span style={{ color: 'var(--cyan)' }}>LOCK</span>
+            </div>
+            <div className="text-sm text-[var(--ink)] font-bold mb-1">Transformation corporelle</div>
+            <div className="text-xs text-[var(--muted)]">Objectif perte de gras sur 8 semaines. Rituels, nutrition et suivi de composition corporelle pré-configurés.</div>
+          </button>
+          <button
+            onClick={() => { setChallengeType('custom'); setStep('profile'); }}
+            className="panel p-5 text-left rounded-xl transition-all hover:border-[var(--cyan)]"
+            style={{ border: '1px solid var(--border)' }}
+          >
+            <div className="font-display text-xl uppercase tracking-wider mb-1" style={{ color: 'var(--cyan)' }}>
+              CUSTOM<span style={{ color: 'var(--blue-bright)' }}>LOCK</span>
+            </div>
+            <div className="text-sm text-[var(--ink)] font-bold mb-1">Challenge sur mesure</div>
+            <div className="text-xs text-[var(--muted)]">Définis toi-même les rituels, les métriques et les règles. Démarre depuis le template FATLOCK ou repart de zéro.</div>
+          </button>
         </div>
       </div>
     );
@@ -343,12 +425,144 @@ export default function Welcome() {
     );
   }
 
+  // Custom challenge setup
+  if (step === 'custom-setup') {
+    return (
+      <div className="min-h-screen px-4 py-10 max-w-lg mx-auto animate-fade-in">
+        <div className="mb-6">
+          <button onClick={() => setStep('profile')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block">← Retour</button>
+          <h1 className="font-display text-3xl uppercase tracking-wider">Ton CUSTOMLOCK</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">Configure les règles de ton challenge. Pré-rempli avec le template FATLOCK.</p>
+        </div>
+
+        <div className="space-y-5">
+          {/* Description */}
+          <div>
+            <label>Description du challenge</label>
+            <input type="text" value={customSettings.description} onChange={(e) => setCustomSettings((s) => ({ ...s, description: e.target.value }))} placeholder="Ex: Running — 100km en 8 semaines" />
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label>Durée : <span className="font-mono font-bold text-[var(--cyan)]">{customSettings.durationWeeks} semaines</span></label>
+            <input type="range" min={4} max={24} step={1} value={customSettings.durationWeeks}
+              onChange={(e) => setCustomSettings((s) => ({ ...s, durationWeeks: parseInt(e.target.value) }))}
+              className="w-full mt-1" />
+            <div className="flex justify-between text-xs text-[var(--muted)] mt-1"><span>4 sem.</span><span>24 sem.</span></div>
+          </div>
+
+          {/* Metrics */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">Métriques</div>
+            <div className="space-y-2">
+              {[
+                { key: 'trackWeight', label: 'Suivi du poids' },
+                { key: 'trackBodyFat', label: 'Suivi % masse grasse' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={customSettings[key as keyof typeof customSettings] as boolean}
+                    onChange={(e) => setCustomSettings((s) => ({ ...s, [key]: e.target.checked }))} />
+                  <span className="text-sm text-[var(--ink)]">{label}</span>
+                </label>
+              ))}
+              {customSettings.trackWeight && (
+                <div className="pl-6">
+                  <label className="text-xs text-[var(--muted)]">Direction du poids</label>
+                  <div className="flex gap-2 mt-1">
+                    {([['down','↓ Perdre'], ['up','↑ Prendre'], ['stable','→ Maintenir']] as const).map(([v, l]) => (
+                      <button key={v} onClick={() => setCustomSettings((s) => ({ ...s, weightDirection: v }))}
+                        className="px-3 py-1 rounded text-xs font-bold transition-all"
+                        style={{ background: customSettings.weightDirection === v ? 'var(--blue)' : 'var(--panel)', color: customSettings.weightDirection === v ? 'white' : 'var(--muted)', border: '1px solid var(--border)' }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="text-xs text-[var(--muted)]">Métrique personnalisée (optionnel)</label>
+                <input type="text" value={customSettings.customMetricLabel ?? ''} placeholder="Ex: km courus, kg soulevés..."
+                  onChange={(e) => setCustomSettings((s) => ({ ...s, customMetricLabel: e.target.value || undefined }))} />
+              </div>
+            </div>
+          </div>
+
+          {/* Nutrition */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">Nutrition</div>
+            <label className="flex items-center gap-3 cursor-pointer mb-2">
+              <input type="checkbox" checked={customSettings.nutritionEnabled}
+                onChange={(e) => setCustomSettings((s) => ({ ...s, nutritionEnabled: e.target.checked }))} />
+              <span className="text-sm text-[var(--ink)]">Activer le suivi nutritionnel</span>
+            </label>
+            {customSettings.nutritionEnabled && (
+              <div className="flex gap-2 pl-6">
+                {([['deficit','Déficit'], ['surplus','Surplus'], ['manual','Manuel']] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => setCustomSettings((s) => ({ ...s, caloricDirection: v }))}
+                    className="px-3 py-1 rounded text-xs font-bold transition-all"
+                    style={{ background: customSettings.caloricDirection === v ? 'var(--blue)' : 'var(--panel)', color: customSettings.caloricDirection === v ? 'white' : 'var(--muted)', border: '1px solid var(--border)' }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Ritual builder */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Rituels quotidiens</div>
+            <p className="text-xs text-[var(--muted2)] mb-3">
+              <span style={{ color: 'var(--gold)' }}>★</span> = requis · pts : intensité du rituel (1–3) · max 10 rituels
+            </p>
+            <div className="space-y-2">
+              {customSettings.rituals.map((r, i) => (
+                <div key={r.id} className="flex items-center gap-2">
+                  <input type="text" value={r.label} placeholder="Nom du rituel"
+                    onChange={(e) => updateRitual(i, { label: e.target.value })}
+                    className="flex-1 text-sm" style={{ padding: '6px 10px' }} />
+                  <div className="flex gap-1">
+                    {([1, 2, 3] as const).map((p) => (
+                      <button key={p} onClick={() => updateRitual(i, { points: p })}
+                        className="w-7 h-7 rounded text-xs font-bold transition-all"
+                        style={{ background: r.points === p ? 'var(--blue)' : 'var(--panel2)', color: r.points === p ? 'white' : 'var(--muted)', border: '1px solid var(--border)' }}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => updateRitual(i, { required: !r.required })}
+                    className="w-7 h-7 rounded text-xs font-bold transition-all"
+                    style={{ background: r.required ? 'rgba(255,200,0,0.15)' : 'var(--panel2)', color: r.required ? 'var(--gold)' : 'var(--muted)', border: `1px solid ${r.required ? 'var(--gold)' : 'var(--border)'}` }}>
+                    ★
+                  </button>
+                  <button onClick={() => removeRitual(i)} className="w-7 h-7 rounded text-sm font-bold flex items-center justify-center"
+                    style={{ color: 'var(--red)', background: 'var(--panel2)', border: '1px solid var(--border)' }}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            {customSettings.rituals.length < 10 && (
+              <button onClick={addRitual} className="mt-3 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--blue-bright)' }}>
+                + Ajouter un rituel
+              </button>
+            )}
+          </div>
+
+          <Button className="w-full" onClick={() => setStep('challenge')}
+            disabled={customSettings.rituals.filter((r) => r.label.trim()).length === 0}>
+            Configurer le challenge →
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Challenge setup
   if (step === 'challenge') {
     return (
       <div className="min-h-screen px-4 py-10 max-w-lg mx-auto animate-fade-in">
         <div className="mb-8">
-          <button onClick={() => setStep('confirm-nutrition')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block">← Retour</button>
+          <button onClick={() => setStep(challengeType === 'custom' ? 'custom-setup' : 'confirm-nutrition')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block">← Retour</button>
           <h1 className="font-display text-3xl uppercase tracking-wider">
             {mode === 'create' ? 'Créer le challenge' : 'Rejoindre le challenge'}
           </h1>

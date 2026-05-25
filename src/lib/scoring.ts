@@ -1,7 +1,13 @@
-import { DailyLog, BodyComposition, WeeklyScore, Intensity, RankTier, Sex } from '../types';
+import { DailyLog, BodyComposition, WeeklyScore, Intensity, RankTier, Sex, CustomRitual } from '../types';
 import { INTENSITY_MULTIPLIER } from './nutrition';
 import { RANK_TIERS } from '../constants/ranks';
 import { getRitualsForDay, getMaxPointsForDay } from '../constants/rituals';
+
+const INTENSITY_RITUAL_THRESHOLD: Record<Intensity, number> = {
+  flow: 1.0,
+  standard: 0.8,
+  safe: 0.6,
+};
 
 export const RITUAL_POINTS: Record<string, number> = {
   no_refined_sugar: 10,
@@ -17,28 +23,42 @@ export const RITUAL_POINTS: Record<string, number> = {
   no_lapse: 15,
 };
 
-export function calcDayRitualPoints(log: DailyLog, intensity: Intensity): number {
-  const availableRituals = getRitualsForDay(log.dayType);
+export function calcDayRitualPoints(log: DailyLog, intensity: Intensity, customRituals?: CustomRitual[]): number {
+  if (customRituals && customRituals.length > 0) {
+    let raw = 0;
+    for (const ritual of customRituals) {
+      if (log.rituals[ritual.id]) raw += ritual.points * 10;
+    }
+    return Math.round(raw * INTENSITY_MULTIPLIER[intensity]);
+  }
+  const availableRituals = getRitualsForDay(log.dayType ?? 'repos');
   let raw = 0;
   for (const ritual of availableRituals) {
-    if (log.rituals[ritual.id]) {
-      raw += ritual.points;
-    }
+    if (log.rituals[ritual.id]) raw += ritual.points;
   }
   return Math.round(raw * INTENSITY_MULTIPLIER[intensity]);
 }
 
-export function calcStreak(logs: DailyLog[], intensity: Intensity): number {
-  // 60% threshold of max possible daily points
+function isDayValid(log: DailyLog, intensity: Intensity, customRituals?: CustomRitual[]): boolean {
+  if (customRituals && customRituals.length > 0) {
+    const required = customRituals.filter((r) => r.required);
+    const pool = required.length > 0 ? required : customRituals;
+    const done = pool.filter((r) => log.rituals[r.id]).length;
+    return done / pool.length >= INTENSITY_RITUAL_THRESHOLD[intensity];
+  }
+  const maxPossible = getMaxPointsForDay(log.dayType ?? 'repos');
+  const rawPoints = Object.entries(log.rituals)
+    .filter(([, v]) => v)
+    .reduce((sum, [k]) => sum + (RITUAL_POINTS[k] ?? 0), 0);
+  return rawPoints >= maxPossible * 0.6;
+}
+
+export function calcStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {
   const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   let streak = 0;
   let maxStreak = 0;
-
   for (const log of sorted) {
-    const maxPossible = getMaxPointsForDay(log.dayType);
-    const threshold = maxPossible * 0.6;
-    const earned = calcDayRitualPoints(log, intensity) / INTENSITY_MULTIPLIER[intensity]; // raw points
-    if (earned >= threshold) {
+    if (isDayValid(log, intensity, customRituals)) {
       streak++;
       if (streak > maxStreak) maxStreak = streak;
     } else {
@@ -48,16 +68,11 @@ export function calcStreak(logs: DailyLog[], intensity: Intensity): number {
   return streak;
 }
 
-export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity): number {
-  const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date)); // newest first
+export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {
+  const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   let streak = 0;
   for (const log of sorted) {
-    const maxPossible = getMaxPointsForDay(log.dayType);
-    const threshold = maxPossible * 0.6;
-    const rawPoints = Object.entries(log.rituals)
-      .filter(([, v]) => v)
-      .reduce((sum, [k]) => sum + (RITUAL_POINTS[k] ?? 0), 0);
-    if (rawPoints >= threshold) {
+    if (isDayValid(log, intensity, customRituals)) {
       streak++;
     } else {
       break;

@@ -8,7 +8,21 @@ import {
 
 export default function Nutrition() {
   const profile = useProfileStore((s) => s.profile)!;
+  const challenge = useProfileStore((s) => s.challenge)!;
   const getLatest = useLogStore((s) => s.getLatestBodyComp);
+
+  const nutritionEnabled = challenge.challengeType !== 'custom' || (challenge.customSettings?.nutritionEnabled ?? true);
+  if (!nutritionEnabled) {
+    return (
+      <PageWrapper title="Nutrition">
+        <div className="panel p-8 text-center">
+          <div className="text-3xl mb-3">🥗</div>
+          <div className="font-bold text-[var(--ink)] mb-2">Nutrition non activée</div>
+          <p className="text-sm text-[var(--muted)]">L'organisateur de ce challenge n'a pas activé le suivi nutritionnel.</p>
+        </div>
+      </PageWrapper>
+    );
+  }
   const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
   const dailyLogs = useLogStore((s) => s.dailyLogs).filter((l) => l.userId === profile.id);
 

@@ -6,21 +6,24 @@ import { getTierColor } from '../../constants/ranks';
 
 export default function RankCard() {
   const profile = useProfileStore((s) => s.profile)!;
+  const challenge = useProfileStore((s) => s.challenge)!;
   const logs = useLogStore((s) => s.dailyLogs).filter((l) => l.userId === profile.id);
   const weeklyScores = useLogStore((s) => s.weeklyScores).filter((s) => s.userId === profile.id);
   const entry = useLeaderboardStore((s) => s.getEntry(profile.id));
   const lbEntries = useLeaderboardStore((s) => s.masterLeaderboard?.entries.length ?? 1);
 
+  const customRituals = challenge.challengeType === 'custom' ? challenge.customSettings?.rituals : undefined;
+
   // Live ego points: weekly scores + all confirmed daily logs (rituals update in real time)
   const unscoredLogs = logs.filter((l) => l.codeConfirmed);
   const weeklyEgo = weeklyScores.reduce((sum, s) => sum + s.egoPoints + s.streakBonus + s.aiBonus, 0);
-  const liveDailyPts = unscoredLogs.reduce((sum, l) => sum + calcDayRitualPoints(l, profile.intensity), 0);
+  const liveDailyPts = unscoredLogs.reduce((sum, l) => sum + calcDayRitualPoints(l, profile.intensity, customRituals), 0);
   const totalEgo = weeklyEgo + liveDailyPts;
 
   const tier = getTier(totalEgo);
   const tierName = displayTier(tier, profile.sex);
   const tierColor = getTierColor(tier);
-  const streak = calcCurrentStreak(logs, profile.intensity);
+  const streak = calcCurrentStreak(logs, profile.intensity, customRituals);
   const rank = entry?.currentRank ?? '—';
 
   const confirmedLogs = logs.filter((l) => l.codeConfirmed);

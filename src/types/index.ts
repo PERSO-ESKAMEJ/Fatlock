@@ -1,6 +1,45 @@
 export type Sex = 'M' | 'F';
 export type Intensity = 'safe' | 'standard' | 'flow';
 export type DayType = 'muscu_j1' | 'muscu_j2' | 'muscu_j3' | 'cardio' | 'repos';
+export type ChallengeType = 'fatlock' | 'custom';
+export type WeightDirection = 'down' | 'up' | 'stable';
+export type CaloricDirection = 'deficit' | 'surplus' | 'manual';
+export type PhotoTracking = 'required' | 'optional' | 'disabled';
+
+export interface CustomRitual {
+  id: string;
+  label: string;
+  points: 1 | 2 | 3;
+  required: boolean;
+}
+
+export interface CustomChallengeSettings {
+  description: string;
+  durationWeeks: number;
+  trackWeight: boolean;
+  weightDirection: WeightDirection;
+  trackBodyFat: boolean;
+  trackPhotos: PhotoTracking;
+  customMetricLabel?: string;
+  nutritionEnabled: boolean;
+  caloricDirection: CaloricDirection;
+  manualKcal?: number;
+  rituals: CustomRitual[];
+  aiAnalysisEnabled: boolean;
+}
+
+export const FATLOCK_DEFAULT_CUSTOM_RITUALS: CustomRitual[] = [
+  { id: 'no_refined_sugar', label: 'Aucun sucre raffiné', points: 1, required: true },
+  { id: 'whole_grains_only', label: 'Céréales complètes uniquement', points: 1, required: false },
+  { id: 'veggies_every_meal', label: 'Légumes à chaque repas', points: 1, required: false },
+  { id: 'protein_target_met', label: 'Objectif protéines atteint', points: 2, required: true },
+  { id: 'good_fats', label: 'Bons lipides consommés', points: 1, required: false },
+  { id: 'hydration_2L', label: 'Hydratation 2L minimum', points: 1, required: true },
+  { id: 'sleep_7h', label: 'Sommeil 7h minimum', points: 1, required: true },
+  { id: 'no_snacking', label: 'Aucun grignotage', points: 1, required: false },
+  { id: 'training_done', label: "Séance d'entraînement effectuée", points: 2, required: true },
+  { id: 'no_lapse', label: 'Aucun écart alimentaire', points: 2, required: false },
+];
 export type RankTier =
   | 'Corps Brut'
   | 'En Construction'
@@ -43,15 +82,18 @@ export interface ChallengeConfig {
   adminId: string;
   participantIds: string[];
   anthropicApiKey?: string;
+  challengeType: ChallengeType;
+  customSettings?: CustomChallengeSettings;
 }
 
 export interface DailyLog {
   userId: string;
   date: string;
   codeConfirmed: boolean;
-  dayType: DayType;
+  dayType: DayType | null;
   rituals: Record<string, boolean>;
   weightKg?: number;
+  customMetricValue?: number;
   notes?: string;
 }
 
