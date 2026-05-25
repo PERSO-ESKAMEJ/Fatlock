@@ -81,7 +81,8 @@ export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, custom
   return streak;
 }
 
-export function calcAIBonus(credibilityScore: number, intensity: Intensity = 'standard'): number {
+export function calcAIBonus(credibilityScore: number | null, intensity: Intensity = 'standard'): number {
+  if (credibilityScore === null) return 0;
   if (intensity === 'flow') {
     if (credibilityScore >= 90) return 50;
     if (credibilityScore >= 75) return 35;
@@ -165,7 +166,7 @@ export function buildWeeklyScore(
   intensity: Intensity,
   startCompo: BodyComposition | null,
   currentCompo: BodyComposition | null,
-  credibilityScore: number,
+  credibilityScore: number | null,
   totalDays: number
 ): WeeklyScore {
   const egoPoints = logs.reduce(

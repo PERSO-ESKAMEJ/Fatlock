@@ -60,17 +60,26 @@ export default function WeeklyCheckin() {
       addBodyComposition(savedComp);
 
       if (!isBaseline) {
-        const userLogs = dailyLogs.filter((l) => l.userId === profile.id);
-        const startComp = userComps.find((c) => c.weekNumber === 0) ?? userComps[0] ?? null;
+        const challengeStart = new Date(challenge.startDate);
+        const weekStartDate = new Date(challengeStart);
+        weekStartDate.setDate(challengeStart.getDate() + (currentWeek - 1) * 7);
+        const weekEndDate = new Date(challengeStart);
+        weekEndDate.setDate(challengeStart.getDate() + currentWeek * 7);
+        const weekStartStr = weekStartDate.toISOString().slice(0, 10);
+        const weekEndStr = weekEndDate.toISOString().slice(0, 10);
+        const weekLogs = dailyLogs.filter(
+          (l) => l.userId === profile.id && l.date >= weekStartStr && l.date < weekEndStr
+        );
+        const startComp = userComps.find((c) => c.weekNumber === 0) ?? null;
         const score = buildWeeklyScore(
           profile.id,
           currentWeek,
-          userLogs,
+          weekLogs,
           profile.intensity,
           startComp,
           savedComp,
-          0,
-          56
+          null,
+          7
         );
         addWeeklyScore(score);
       }
