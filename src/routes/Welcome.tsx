@@ -43,9 +43,12 @@ export default function Welcome() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdding = searchParams.get('add') === '1';
+  const joinParam = (searchParams.get('join') ?? '').toUpperCase();
+  const gnameParam = decodeURIComponent(searchParams.get('gname') ?? '');
+  const hasJoinLink = joinParam.length === 6;
 
-  const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>('landing');
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
+  const [mode, setMode] = useState<'create' | 'join'>(hasJoinLink ? 'join' : 'create');
   const [challengeType, setChallengeType] = useState<ChallengeType>('fatlock');
   const [customSettings, setCustomSettings] = useState<CustomChallengeSettings>({
     description: '',
@@ -74,13 +77,13 @@ export default function Welcome() {
   });
 
   // Challenge fields
-  const [groupName, setGroupName] = useState('');
   const [stake, setStake] = useState('20');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10);
   });
-  const [joinCode, setJoinCode] = useState('');
+  const [joinCode, setJoinCode] = useState(joinParam);
+  const [groupName, setGroupName] = useState(gnameParam);
 
   function handleProfileSave() {
     if (!name || !age || !height || !weight) return;
@@ -562,7 +565,10 @@ export default function Welcome() {
     return (
       <div className="min-h-screen px-4 py-10 max-w-lg mx-auto animate-fade-in">
         <div className="mb-8">
-          <button onClick={() => setStep(challengeType === 'custom' ? 'custom-setup' : 'confirm-nutrition')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block">← Retour</button>
+          <button
+            onClick={() => setStep(mode === 'join' ? 'profile' : challengeType === 'custom' ? 'custom-setup' : 'confirm-nutrition')}
+            className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block"
+          >← Retour</button>
           <h1 className="font-display text-3xl uppercase tracking-wider">
             {mode === 'create' ? 'Créer le challenge' : 'Rejoindre le challenge'}
           </h1>
@@ -570,16 +576,33 @@ export default function Welcome() {
 
         <div className="space-y-4">
           {mode === 'join' ? (
-            <div>
-              <label>Code du groupe (6 caractères)</label>
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="ABC123"
-                maxLength={6}
-                className="text-center font-mono text-xl uppercase tracking-widest"
-              />
+            <div className="space-y-4">
+              {gnameParam ? (
+                <div>
+                  <label>Groupe</label>
+                  <div
+                    className="w-full p-3 rounded-lg font-bold text-[var(--ink)]"
+                    style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}
+                  >
+                    {groupName}
+                  </div>
+                </div>
+              ) : null}
+              <div>
+                <label>Code du groupe (6 caractères)</label>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => !hasJoinLink && setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={6}
+                  readOnly={hasJoinLink}
+                  className={`text-center font-mono text-xl uppercase tracking-widest${hasJoinLink ? ' opacity-70 cursor-not-allowed' : ''}`}
+                />
+                {hasJoinLink && (
+                  <p className="text-xs text-[var(--muted)] mt-1">Code récupéré depuis le lien d'invitation.</p>
+                )}
+              </div>
             </div>
           ) : (
             <>

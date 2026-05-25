@@ -82,7 +82,7 @@ export interface ChallengeConfig {
   adminId: string;
   participantIds: string[];
   anthropicApiKey?: string;
-  challengeType: ChallengeType;
+  challengeType?: ChallengeType;
   customSettings?: CustomChallengeSettings;
 }
 

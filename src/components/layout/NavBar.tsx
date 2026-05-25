@@ -68,9 +68,7 @@ export default function NavBar() {
             >
               {profile?.name?.charAt(0).toUpperCase()}
             </div>
-            {entries.length > 1 && (
-              <span className="text-[var(--muted)] text-xs">▾</span>
-            )}
+            <span className="text-[var(--muted)] text-xs">▾</span>
           </button>
 
           {open && (
@@ -96,6 +94,13 @@ export default function NavBar() {
                   </button>
                 ))}
                 <div style={{ borderTop: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => { setOpen(false); navigate('/parametres'); }}
+                    className="w-full px-4 py-3 text-left text-xs hover:bg-[var(--panel2)] transition-colors"
+                    style={{ color: 'var(--muted)' }}
+                  >
+                    ⚙ Paramètres
+                  </button>
                   <button
                     onClick={() => { setOpen(false); navigate('/?add=1'); }}
                     className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-wider hover:bg-[var(--panel2)] transition-colors"

@@ -160,6 +160,21 @@ export default function Settings() {
             <span className="font-mono font-bold" style={{ color: 'var(--cyan)' }}>{todayCode}</span>
           </div>
         </div>
+        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+          <div className="text-xs text-[var(--muted)] mb-1">Lien d'invitation</div>
+          <button
+            className="w-full text-left font-mono text-xs p-2 rounded break-all transition-all hover:opacity-80"
+            style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
+            onClick={() => {
+              const base = `${window.location.origin}${window.location.pathname.replace(/\/$/, '')}`;
+              const link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}`;
+              navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));
+            }}
+          >
+            ?join={challenge.groupCode}&gname={encodeURIComponent(challenge.groupName)}
+          </button>
+          <p className="text-xs text-[var(--muted2)] mt-1">Clique pour copier. Partage ce lien aux participants.</p>
+        </div>
       </div>
 
       {/* API Key (admin only) */}

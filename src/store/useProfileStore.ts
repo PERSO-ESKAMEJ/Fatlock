@@ -96,6 +96,25 @@ export const useProfileStore = create<ProfileStore>()(
 
       resetAll: () => set({ entries: [], activeId: null, profile: null, challenge: null }),
     }),
-    { name: 'fatlock-profile' }
+    {
+      name: 'fatlock-profile',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          if (
+            persistedState.profile &&
+            persistedState.challenge &&
+            (!persistedState.entries || persistedState.entries.length === 0)
+          ) {
+            return {
+              ...persistedState,
+              entries: [{ profile: persistedState.profile, challenge: persistedState.challenge }],
+              activeId: persistedState.profile.id,
+            };
+          }
+        }
+        return persistedState;
+      },
+    }
   )
 );
