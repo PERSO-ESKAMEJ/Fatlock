@@ -18,6 +18,12 @@ const DAY_TYPE_LABELS: Record<DayType, string> = {
   repos: 'Repos',
 };
 
+function getYesterdayStr(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function Rituals() {
   const profile = useProfileStore((s) => s.profile)!;
   const challenge = useProfileStore((s) => s.challenge)!;
@@ -25,14 +31,25 @@ export default function Rituals() {
   const { isCodeConfirmed } = useChallengeStore();
   const { showToast } = useToast();
 
+  const today = getTodayStr();
+  const yesterday = getYesterdayStr();
+
+  const [viewingDay, setViewingDay] = useState<'today' | 'yesterday'>('today');
+  const isYesterday = viewingDay === 'yesterday';
+  const activeDate = isYesterday ? yesterday : today;
+
   const isCustom = challenge.challengeType === 'custom';
   const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
-  const today = getTodayStr();
-  const confirmed = isCodeConfirmed(today);
-  const existingLog = getDailyLog(profile.id, today);
+  const todayConfirmed = isCodeConfirmed(today);
+  // Hier est toujours accessible sans code — la journée est terminée
+  const unlocked = isYesterday || todayConfirmed;
 
-  const dow = new Date().getDay();
+  const existingLog = getDailyLog(profile.id, activeDate);
+
+  // Détermine le type de jour pour la date affichée
+  const dateObj = isYesterday ? new Date(yesterday + 'T12:00:00') : new Date();
+  const dow = dateObj.getDay();
   const dowMap: Record<number, keyof typeof profile.trainingDays> = {
     0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
     4: 'thursday', 5: 'friday', 6: 'saturday',
@@ -55,11 +72,11 @@ export default function Rituals() {
   const completedCount = Object.values(ritualState).filter(Boolean).length;
 
   function toggleRitual(key: string, currentValue: boolean) {
-    if (!confirmed) return;
+    if (!unlocked) return;
     const newRituals = { ...ritualState, [key]: !currentValue };
     const updatedLog = {
       userId: profile.id,
-      date: today,
+      date: activeDate,
       codeConfirmed: true,
       dayType: isCustom ? null : dayType,
       rituals: newRituals,
@@ -77,8 +94,8 @@ export default function Rituals() {
   function handleSaveMetrics() {
     const updatedLog = {
       userId: profile.id,
-      date: today,
-      codeConfirmed: confirmed,
+      date: activeDate,
+      codeConfirmed: true,
       dayType: isCustom ? null : dayType,
       rituals: ritualState,
       weightKg: weight ? parseFloat(weight) : undefined,
@@ -94,11 +111,11 @@ export default function Rituals() {
   return (
     <PageWrapper>
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="font-display text-2xl uppercase tracking-wider">Rituels du jour</h1>
           <div className="text-xs text-[var(--muted)] mt-1">
-            {today}
+            {activeDate}
             {!isCustom && <> · <span className="text-[var(--ink)]">{DAY_TYPE_LABELS[dayType]}</span></>}
           </div>
         </div>
@@ -108,60 +125,98 @@ export default function Rituals() {
         </div>
       </div>
 
-      {!confirmed ? (
+      {/* Sélecteur Aujourd'hui / Hier */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => { setViewingDay('today'); }}
+          className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+          style={{
+            background: !isYesterday ? 'var(--blue)' : 'var(--panel)',
+            color: !isYesterday ? 'white' : 'var(--muted)',
+            border: `1px solid ${!isYesterday ? 'var(--blue)' : 'var(--border)'}`,
+          }}
+        >
+          Aujourd'hui
+        </button>
+        <button
+          onClick={() => { setViewingDay('yesterday'); }}
+          className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+          style={{
+            background: isYesterday ? 'var(--blue)' : 'var(--panel)',
+            color: isYesterday ? 'white' : 'var(--muted)',
+            border: `1px solid ${isYesterday ? 'var(--blue)' : 'var(--border)'}`,
+          }}
+        >
+          Hier · {yesterday}
+        </button>
+      </div>
+
+      {!unlocked ? (
         <div className="panel p-4 text-center" style={{ borderColor: 'var(--red)' }}>
           <div className="text-2xl mb-2">🔐</div>
           <div className="font-bold text-[var(--ink)] mb-1">Rituels verrouillés</div>
           <p className="text-sm text-[var(--muted)]">Confirme le code du jour sur le Dashboard pour débloquer.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {rituals.map((ritual) => {
-            const done = ritualState[ritual.id] ?? false;
-            const label = profile.sex === 'F' ? ritual.labelF : ritual.labelM;
-            const pts = Math.round(ritual.points * INTENSITY_MULTIPLIER[profile.intensity]);
-            const isRequired = isCustom
-              ? (customRituals?.find((r) => r.id === ritual.id)?.required ?? false)
-              : false;
+        <>
+          {isYesterday && (
+            <div
+              className="mb-3 px-3 py-2 rounded-lg text-xs"
+              style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)', color: 'var(--muted)' }}
+            >
+              Tu remplis les rituels d'hier. L'IA compare tes déclarations à ta transformation hebdomadaire.
+            </div>
+          )}
+          <div className="space-y-2">
+            {rituals.map((ritual) => {
+              const done = ritualState[ritual.id] ?? false;
+              const label = profile.sex === 'F' ? ritual.labelF : ritual.labelM;
+              const pts = Math.round(ritual.points * INTENSITY_MULTIPLIER[profile.intensity]);
+              const isRequired = isCustom
+                ? (customRituals?.find((r) => r.id === ritual.id)?.required ?? false)
+                : false;
 
-            return (
-              <button
-                key={ritual.id}
-                onClick={() => toggleRitual(ritual.id, done)}
-                className="w-full panel2 p-3 flex items-center gap-3 text-left transition-all hover:border-[var(--blue)]"
-                style={{ borderColor: done ? 'var(--green)' : undefined, background: done ? 'rgba(47,227,154,0.06)' : undefined }}
-              >
-                <div
-                  className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 transition-all"
-                  style={{
-                    background: done ? 'var(--green)' : 'transparent',
-                    border: `2px solid ${done ? 'var(--green)' : 'var(--border)'}`,
-                  }}
+              return (
+                <button
+                  key={ritual.id}
+                  onClick={() => toggleRitual(ritual.id, done)}
+                  className="w-full panel2 p-3 flex items-center gap-3 text-left transition-all hover:border-[var(--blue)]"
+                  style={{ borderColor: done ? 'var(--green)' : undefined, background: done ? 'rgba(47,227,154,0.06)' : undefined }}
                 >
-                  {done && <span className="text-xs font-bold" style={{ color: 'var(--bg)' }}>✓</span>}
-                </div>
-                <span className={`flex-1 text-sm ${done ? 'line-through text-[var(--muted)]' : 'text-[var(--ink)]'}`}>
-                  {label}
-                  {isRequired && !done && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--gold)' }}>★ requis</span>}
-                </span>
-                <span
-                  className="text-xs font-mono font-bold px-2 py-0.5 rounded"
-                  style={{
-                    background: done ? 'rgba(47,227,154,0.15)' : 'var(--panel)',
-                    color: done ? 'var(--green)' : 'var(--muted)',
-                  }}
-                >
-                  +{pts}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  <div
+                    className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      background: done ? 'var(--green)' : 'transparent',
+                      border: `2px solid ${done ? 'var(--green)' : 'var(--border)'}`,
+                    }}
+                  >
+                    {done && <span className="text-xs font-bold" style={{ color: 'var(--bg)' }}>✓</span>}
+                  </div>
+                  <span className={`flex-1 text-sm ${done ? 'line-through text-[var(--muted)]' : 'text-[var(--ink)]'}`}>
+                    {label}
+                    {isRequired && !done && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--gold)' }}>★ requis</span>}
+                  </span>
+                  <span
+                    className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+                    style={{
+                      background: done ? 'rgba(47,227,154,0.15)' : 'var(--panel)',
+                      color: done ? 'var(--green)' : 'var(--muted)',
+                    }}
+                  >
+                    +{pts}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
 
-      {/* Metrics */}
+      {/* Métriques */}
       <div className="mt-6 panel p-4 space-y-3">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Métriques du jour</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+          Métriques {isYesterday ? "d'hier" : 'du jour'}
+        </div>
         {trackWeight && (
           <div className="flex gap-2">
             <input
@@ -193,8 +248,8 @@ export default function Rituals() {
         )}
       </div>
 
-      {/* Progress bar */}
-      {confirmed && rituals.length > 0 && (
+      {/* Barre de progression */}
+      {unlocked && rituals.length > 0 && (
         <div className="mt-4 panel2 p-3">
           <div className="flex justify-between text-xs text-[var(--muted)] mb-2">
             <span>{completedCount}/{rituals.length} rituels validés</span>
