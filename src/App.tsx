@@ -10,6 +10,7 @@ import Progress from './routes/Progress';
 import Leaderboard from './routes/Leaderboard';
 import FinalVote from './routes/FinalVote';
 import Settings from './routes/Settings';
+import DevSeed from './routes/DevSeed';
 import NavBar from './components/layout/NavBar';
 import { ToastProvider } from './components/ui/Toast';
 
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/classement" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
           <Route path="/vote-final" element={<ProtectedRoute><FinalVote /></ProtectedRoute>} />
           <Route path="/parametres" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/dev" element={<ProtectedRoute><DevSeed /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to={isSetup ? '/dashboard' : '/'} replace />} />
         </Routes>
       </div>
