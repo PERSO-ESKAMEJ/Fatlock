@@ -49,8 +49,11 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
   if (safetyFloorApplied) targetKcal = floor;
 
   const protein = Math.round(2.0 * w);
-  const fat = Math.max(Math.round(0.8 * w), Math.round((targetKcal * 0.22) / 9));
-  const carbs = Math.max(40, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
+  // Fat: ideally 0.8g/kg, but capped so protein+fat don't exceed targetKcal
+  const idealFat = Math.max(Math.round(0.8 * w), Math.round((targetKcal * 0.22) / 9));
+  const maxFat = Math.max(30, Math.floor((targetKcal - protein * 4) / 9));
+  const fat = Math.min(idealFat, maxFat);
+  const carbs = Math.max(20, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
   const projectedWeightAt8Weeks = +(w - weeklyLossKg * 8).toFixed(1);
 
   return {
