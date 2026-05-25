@@ -81,13 +81,27 @@ export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, custom
   return streak;
 }
 
-export function calcAIBonus(credibilityScore: number): number {
-  // Additive only, never negative
+export function calcAIBonus(credibilityScore: number, intensity: Intensity = 'standard'): number {
+  if (intensity === 'flow') {
+    if (credibilityScore >= 90) return 50;
+    if (credibilityScore >= 75) return 35;
+    if (credibilityScore >= 60) return 20;
+    if (credibilityScore >= 40) return -30;
+    return -60;
+  }
+  if (intensity === 'standard') {
+    if (credibilityScore >= 90) return 50;
+    if (credibilityScore >= 75) return 30;
+    if (credibilityScore >= 60) return 15;
+    if (credibilityScore >= 40) return -15;
+    return -35;
+  }
+  // safe
   if (credibilityScore >= 90) return 50;
-  if (credibilityScore >= 75) return 30;
-  if (credibilityScore >= 60) return 15;
-  if (credibilityScore >= 40) return 5;
-  return 0;
+  if (credibilityScore >= 75) return 25;
+  if (credibilityScore >= 60) return 10;
+  if (credibilityScore >= 40) return -10;
+  return -20;
 }
 
 export function calcTransformationScore(
@@ -159,7 +173,7 @@ export function buildWeeklyScore(
     0
   );
   const streakBonus = calcCurrentStreak(logs, intensity) * 5;
-  const aiBonus = calcAIBonus(credibilityScore);
+  const aiBonus = calcAIBonus(credibilityScore, intensity);
   const transformationScore = calcTransformationScore(startCompo, currentCompo);
   const regularityScore = calcRegularityScore(logs, totalDays);
   const totalComposite = calcCompositeScore(

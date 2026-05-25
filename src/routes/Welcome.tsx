@@ -15,9 +15,9 @@ function generateId(len: number): string {
 }
 
 const INTENSITY_OPTIONS: { value: Intensity; label: string; sub: string; mult: string }[] = [
-  { value: 'safe', label: 'SÛRE', sub: 'Progressif et tenable', mult: '×1.0 pts' },
-  { value: 'standard', label: 'STANDARD', sub: 'Le sweet spot FATLOCK', mult: '×1.4 pts' },
-  { value: 'flow', label: 'FLOW', sub: 'Les audacieux seulement. Résultats exceptionnels.', mult: '×2.0 pts' },
+  { value: 'safe', label: 'SÛRE', sub: 'Progressif et tenable. L\'IA valide ta constance.', mult: '×1.0 pts' },
+  { value: 'standard', label: 'STANDARD', sub: 'Le protocole complet. L\'IA surveille ta transformation chaque semaine.', mult: '×1.4 pts' },
+  { value: 'flow', label: 'FLOW', sub: 'Points doublés — mais l\'IA est sans pitié. Une crédibilité faible te coûte plus que tu ne gagnes.', mult: '×2.0 pts' },
 ];
 
 const INTENSITY_COLORS: Record<Intensity, string> = {
@@ -194,6 +194,9 @@ export default function Welcome() {
           </h1>
           <p className="text-[var(--muted)] text-lg">Réveillez votre Ego Abdominal</p>
           <p className="text-xs text-[var(--muted2)] mt-2">Challenge de transformation 8 semaines — groupe — mise en jeu</p>
+          <p className="text-xs mt-3 font-bold uppercase tracking-wider" style={{ color: 'var(--red)' }}>
+            L'IA analyse ta transformation chaque semaine. Les tricheurs financent les vrais.
+          </p>
         </div>
 
         <div className="flex flex-col gap-3 w-full max-w-xs">
@@ -640,13 +643,23 @@ export default function Welcome() {
             </>
           )}
 
+          <div
+            className="p-3 rounded-lg text-xs text-center"
+            style={{ background: 'rgba(255,77,94,0.07)', border: '1px solid rgba(255,77,94,0.2)', color: 'var(--muted)' }}
+          >
+            En participant, tu t'engages sur l'honneur à respecter ton rythme.
+            <span className="font-bold" style={{ color: 'var(--ink)' }}> L'IA analyse ta transformation chaque semaine </span>
+            et pénalise les scores qui ne collent pas avec les déclarations.
+            Les tricheurs ne gagnent pas — ils financent ceux qui ont joué le jeu.
+          </div>
+
           <Button
             className="w-full"
             size="lg"
             onClick={handleCreateChallenge}
             disabled={mode === 'join' ? joinCode.length < 6 : !groupName && !stake}
           >
-            {mode === 'create' ? 'Lancer le challenge' : 'Rejoindre'}
+            {mode === 'create' ? 'Lancer le challenge' : 'Je m\'engage — Rejoindre'}
           </Button>
         </div>
       </div>
