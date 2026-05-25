@@ -42,9 +42,15 @@ export default function RankCard() {
     low: 'Tu es plus forte que ça. Réagis.',
   };
 
-  const rankNum = typeof rank === 'number' ? rank : 99;
-  const position = rankNum <= 2 ? 'top' : rankNum >= lbEntries - 1 ? 'low' : 'mid';
-  const motivation = profile.sex === 'M' ? motivationM[position] : motivationF[position];
+  const rankNum = typeof rank === 'number' ? rank : null;
+  const position = rankNum === null ? 'none' : rankNum <= 2 ? 'top' : rankNum >= lbEntries - 1 ? 'low' : 'mid';
+
+  const motivationNone = profile.sex === 'M'
+    ? 'Le challenge commence. Pose les bases.'
+    : 'Le challenge commence. Pose les bases.';
+  const motivation = position === 'none'
+    ? motivationNone
+    : profile.sex === 'M' ? motivationM[position] : motivationF[position];
 
   return (
     <div

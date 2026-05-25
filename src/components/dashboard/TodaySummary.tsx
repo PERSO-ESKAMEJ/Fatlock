@@ -17,11 +17,11 @@ export default function TodaySummary() {
   const confirmed = isCodeConfirmed(today);
   const log = getDailyLog(profile.id, today);
   const dayType = log?.dayType ?? 'repos';
-  const rituals = getRitualsForDay(dayType);
+  const rituals = getRitualsForDay(dayType, profile.intensity);
   const completedCount = log ? Object.values(log.rituals).filter(Boolean).length : 0;
   const totalCount = rituals.length;
   const earnedPts = log ? calcDayRitualPoints(log, profile.intensity) : 0;
-  const maxPts = getMaxPointsForDay(dayType);
+  const maxPts = getMaxPointsForDay(dayType, profile.intensity);
   const pct = Math.round((completedCount / totalCount) * 100);
 
   return (

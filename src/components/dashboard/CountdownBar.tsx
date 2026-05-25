@@ -5,7 +5,7 @@ export default function CountdownBar() {
   const challenge = useProfileStore((s) => s.challenge)!;
   const daysLeft = getDaysRemaining(challenge.startDate);
   const currentWeek = getCurrentWeek(challenge.startDate);
-  const daysElapsed = 56 - daysLeft;
+  const daysElapsed = Math.max(0, 56 - daysLeft);
   const pct = Math.min(100, Math.round((daysElapsed / 56) * 100));
 
   return (
