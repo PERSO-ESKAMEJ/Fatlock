@@ -52,12 +52,23 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
   const actualDailyDeficit = Math.round(tdee) - targetKcal;
   const actualWeeklyLossKg = +((actualDailyDeficit * 7) / 7700).toFixed(2);
 
-  const protein = Math.round(2.0 * w);
-  // Fat: ideally 0.8g/kg, but capped so protein+fat don't exceed targetKcal
-  const idealFat = Math.max(Math.round(0.8 * w), Math.round((targetKcal * 0.22) / 9));
-  const maxFat = Math.max(30, Math.floor((targetKcal - protein * 4) / 9));
-  const fat = Math.min(idealFat, maxFat);
-  const carbs = Math.max(20, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
+  // Adaptive protein: base by intensity + sex/activity adjustments
+  const proteinBase: Record<Intensity, number> = { safe: 1.8, standard: 2.0, flow: 2.2 };
+  const sexAdj = sex === 'F' ? -0.1 : 0;
+  const activityAdj =
+    activityLevel <= 1.2 ? -0.1 :
+    activityLevel <= 1.375 ? 0 :
+    activityLevel <= 1.55 ? 0.1 :
+    activityLevel <= 1.725 ? 0.2 : 0.3;
+  const proteinPerKg = proteinBase[intensity] + sexAdj + activityAdj;
+  // Cap at 45% of targetKcal to avoid protein consuming the entire budget
+  const maxProteinKcal = targetKcal * 0.45;
+  const protein = Math.min(Math.round(proteinPerKg * w), Math.floor(maxProteinKcal / 4));
+
+  // After protein, split remaining calories: 37% carbs / 63% fat
+  const remainingKcal = Math.max(0, targetKcal - protein * 4);
+  const carbs = Math.max(20, Math.round((remainingKcal * 0.37) / 4));
+  const fat = Math.max(20, Math.round((remainingKcal * 0.63) / 9));
   const projectedWeightAt8Weeks = +(w - actualWeeklyLossKg * 8).toFixed(1);
 
   return {
