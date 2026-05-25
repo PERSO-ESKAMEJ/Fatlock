@@ -42,7 +42,7 @@ export default function Rituals() {
 
   const rituals = isCustom && customRituals
     ? customRituals.map((r) => ({ id: r.id, labelM: r.label, labelF: r.label, points: r.points * 10 }))
-    : getRitualsForDay(dayType);
+    : getRitualsForDay(dayType, profile.intensity);
 
   const ritualState: Record<string, boolean> = existingLog?.rituals ?? {};
   const [weight, setWeight] = useState(existingLog?.weightKg?.toString() ?? '');
@@ -51,7 +51,7 @@ export default function Rituals() {
   const earnedPts = existingLog ? calcDayRitualPoints(existingLog, profile.intensity, customRituals ?? undefined) : 0;
   const maxPts = isCustom && customRituals
     ? Math.round(customRituals.reduce((s, r) => s + r.points * 10, 0) * INTENSITY_MULTIPLIER[profile.intensity])
-    : Math.round(getMaxPointsForDay(dayType) * INTENSITY_MULTIPLIER[profile.intensity]);
+    : Math.round(getMaxPointsForDay(dayType, profile.intensity) * INTENSITY_MULTIPLIER[profile.intensity]);
   const completedCount = Object.values(ritualState).filter(Boolean).length;
 
   function toggleRitual(key: string, currentValue: boolean) {

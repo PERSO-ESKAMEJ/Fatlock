@@ -31,7 +31,7 @@ export function calcDayRitualPoints(log: DailyLog, intensity: Intensity, customR
     }
     return Math.round(raw * INTENSITY_MULTIPLIER[intensity]);
   }
-  const availableRituals = getRitualsForDay(log.dayType ?? 'repos');
+  const availableRituals = getRitualsForDay(log.dayType ?? 'repos', intensity);
   let raw = 0;
   for (const ritual of availableRituals) {
     if (log.rituals[ritual.id]) raw += ritual.points;
@@ -46,7 +46,7 @@ function isDayValid(log: DailyLog, intensity: Intensity, customRituals?: CustomR
     const done = pool.filter((r) => log.rituals[r.id]).length;
     return done / pool.length >= INTENSITY_RITUAL_THRESHOLD[intensity];
   }
-  const maxPossible = getMaxPointsForDay(log.dayType ?? 'repos');
+  const maxPossible = getMaxPointsForDay(log.dayType ?? 'repos', intensity);
   const rawPoints = Object.entries(log.rituals)
     .filter(([, v]) => v)
     .reduce((sum, [k]) => sum + (RITUAL_POINTS[k] ?? 0), 0);
