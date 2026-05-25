@@ -44,6 +44,11 @@ export default function PhotoUploadCrop({ label, onSave, existing, required }: P
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert('Photo trop lourde (max 15 Mo). Compresse l\'image avant de l\'importer.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => { setSrc(reader.result as string); setSaved(false); };
     reader.readAsDataURL(file);

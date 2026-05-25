@@ -25,17 +25,19 @@ export default function Progress() {
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
 
+  const totalWeeks = challenge.customSettings?.durationWeeks ?? 8;
+
   useEffect(() => {
     async function loadPhotos() {
       const loaded: (WeeklyPhoto | null)[] = [];
-      for (let w = 0; w <= 8; w++) {
+      for (let w = 0; w <= totalWeeks; w++) {
         const p = await getPhotosByWeek(profile.id, w);
         loaded.push(p);
       }
       setPhotos(loaded);
     }
     loadPhotos();
-  }, [profile.id]);
+  }, [profile.id, totalWeeks]);
 
   const targets = calculateTargets(profile, profile.startWeight);
 

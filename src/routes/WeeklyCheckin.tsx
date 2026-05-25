@@ -71,6 +71,9 @@ export default function WeeklyCheckin() {
           (l) => l.userId === profile.id && l.date >= weekStartStr && l.date < weekEndStr
         );
         const startComp = userComps.find((c) => c.weekNumber === 0) ?? null;
+        const customRituals = challenge.challengeType === 'custom'
+          ? challenge.customSettings?.rituals
+          : undefined;
         const score = buildWeeklyScore(
           profile.id,
           currentWeek,
@@ -79,7 +82,8 @@ export default function WeeklyCheckin() {
           startComp,
           savedComp,
           null,
-          7
+          7,
+          customRituals
         );
         addWeeklyScore(score);
       }

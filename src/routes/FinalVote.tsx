@@ -24,6 +24,7 @@ export default function FinalVote() {
   const { showToast } = useToast();
 
   const currentWeek = getCurrentWeek(challenge.startDate);
+  const totalWeeks = challenge.customSettings?.durationWeeks ?? 8;
   const [cards, setCards] = useState<VoteCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
@@ -100,14 +101,14 @@ export default function FinalVote() {
     });
   }
 
-  if (currentWeek < 8) {
+  if (currentWeek < totalWeeks) {
     return (
       <PageWrapper title="Vote Final">
         <div className="panel p-6 text-center">
           <div className="text-4xl mb-3">🔒</div>
-          <div className="font-bold text-[var(--ink)] mb-1">Vote disponible à la semaine 8</div>
+          <div className="font-bold text-[var(--ink)] mb-1">Vote disponible à la semaine {totalWeeks}</div>
           <p className="text-sm text-[var(--muted)]">
-            Il reste <span className="font-bold text-[var(--ink)]">{8 - currentWeek} semaine(s)</span> avant le vote final.
+            Il reste <span className="font-bold text-[var(--ink)]">{totalWeeks - currentWeek} semaine(s)</span> avant le vote final.
           </p>
         </div>
       </PageWrapper>

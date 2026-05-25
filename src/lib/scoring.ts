@@ -10,17 +10,28 @@ const INTENSITY_RITUAL_THRESHOLD: Record<Intensity, number> = {
 };
 
 export const RITUAL_POINTS: Record<string, number> = {
+  // Safe
   no_refined_sugar: 10,
-  whole_grains_only: 10,
-  veggies_every_meal: 10,
-  protein_target_met: 15,
-  good_fats: 10,
   hydration_2L: 10,
   sleep_7h: 10,
-  no_snacking: 10,
   training_done: 20,
   repos_active: 10,
+  // Standard
+  veggies_daily: 10,
+  protein_target_met: 15,
+  no_snacking: 10,
+  no_alcohol: 15,
   no_lapse: 15,
+  // Flow
+  intermittent_fasting: 15,
+  no_simple_carbs_after_18: 15,
+  steps_10k: 10,
+  last_meal_before_20: 10,
+  cardio_extra: 15,
+  // Custom challenge ritual IDs (FATLOCK_DEFAULT_CUSTOM_RITUALS)
+  whole_grains_only: 10,
+  veggies_every_meal: 10,
+  good_fats: 10,
 };
 
 export function calcDayRitualPoints(log: DailyLog, intensity: Intensity, customRituals?: CustomRitual[]): number {
@@ -167,13 +178,14 @@ export function buildWeeklyScore(
   startCompo: BodyComposition | null,
   currentCompo: BodyComposition | null,
   credibilityScore: number | null,
-  totalDays: number
+  totalDays: number,
+  customRituals?: CustomRitual[]
 ): WeeklyScore {
   const egoPoints = logs.reduce(
-    (sum, log) => sum + calcDayRitualPoints(log, intensity),
+    (sum, log) => sum + calcDayRitualPoints(log, intensity, customRituals),
     0
   );
-  const streakBonus = calcCurrentStreak(logs, intensity) * 5;
+  const streakBonus = calcCurrentStreak(logs, intensity, customRituals) * 5;
   const aiBonus = calcAIBonus(credibilityScore, intensity);
   const transformationScore = calcTransformationScore(startCompo, currentCompo);
   const regularityScore = calcRegularityScore(logs, totalDays);
