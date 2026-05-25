@@ -32,17 +32,15 @@ export default function FinalVote() {
   useEffect(() => {
     async function buildCards() {
       if (!masterLeaderboard) { setLoading(false); return; }
+      if (masterLeaderboard.entries.length === 0) { setLoading(false); return; }
       const built: VoteCard[] = [];
-      masterLeaderboard.entries.forEach(async (entry, i) => {
+      for (const [i, entry] of masterLeaderboard.entries.entries()) {
         const s0 = await getPhotosByWeek(entry.userId, 0);
         const s8 = await getPhotosByWeek(entry.userId, 8);
         built.push({ entry, anonymousName: generateAnonymousName(i), s0Photo: s0, s8Photo: s8, voteRank: null });
-        if (built.length === masterLeaderboard.entries.length) {
-          setCards([...built]);
-          setLoading(false);
-        }
-      });
-      if (masterLeaderboard.entries.length === 0) setLoading(false);
+      }
+      setCards(built);
+      setLoading(false);
     }
     buildCards();
   }, [masterLeaderboard]);
@@ -92,7 +90,7 @@ export default function FinalVote() {
       }
 
       const ranked = entries
-        .map((e, i) => ({ userId: e.userId, name: e.name, finalRank: 0, score: tally[e.userId] ?? 999 }))
+        .map((e) => ({ userId: e.userId, name: e.name, finalRank: 0, score: tally[e.userId] ?? 999 }))
         .sort((a, b) => a.score - b.score)
         .map((e, i) => ({ ...e, finalRank: i + 1 }));
 
@@ -135,7 +133,7 @@ export default function FinalVote() {
         <div className="space-y-4">
           {cards
             .filter((c) => c.entry.userId !== profile.id)
-            .map((card, i) => (
+            .map((card) => (
               <div key={card.entry.userId} className="panel p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-[var(--ink)]">Participant {card.anonymousName}</div>
