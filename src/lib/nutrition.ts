@@ -48,13 +48,17 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
   const safetyFloorApplied = targetKcal < floor;
   if (safetyFloorApplied) targetKcal = floor;
 
+  // Recalculate actual weekly loss based on real deficit after floor
+  const actualDailyDeficit = Math.round(tdee) - targetKcal;
+  const actualWeeklyLossKg = +((actualDailyDeficit * 7) / 7700).toFixed(2);
+
   const protein = Math.round(2.0 * w);
   // Fat: ideally 0.8g/kg, but capped so protein+fat don't exceed targetKcal
   const idealFat = Math.max(Math.round(0.8 * w), Math.round((targetKcal * 0.22) / 9));
   const maxFat = Math.max(30, Math.floor((targetKcal - protein * 4) / 9));
   const fat = Math.min(idealFat, maxFat);
   const carbs = Math.max(20, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
-  const projectedWeightAt8Weeks = +(w - weeklyLossKg * 8).toFixed(1);
+  const projectedWeightAt8Weeks = +(w - actualWeeklyLossKg * 8).toFixed(1);
 
   return {
     bmr: Math.round(bmr),
@@ -63,7 +67,7 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
     protein,
     fat,
     carbs,
-    weeklyLossKg: +weeklyLossKg.toFixed(2),
+    weeklyLossKg: actualWeeklyLossKg,
     projectedWeightAt8Weeks,
     safetyFloorApplied,
   };
