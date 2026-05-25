@@ -15,6 +15,7 @@ export default function Dashboard() {
   const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
   const navigate = useNavigate();
   const currentWeek = getCurrentWeek(challenge.startDate);
+  const s0Done = bodyComps.some((c) => c.weekNumber === 0);
   const checkinDue = currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
 
   const greeting = profile.sex === 'M'
@@ -47,6 +48,23 @@ export default function Dashboard() {
       <div className="mb-4">
         <CountdownBar />
       </div>
+
+      {/* Baseline S0 */}
+      {!s0Done && (
+        <div
+          className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:opacity-90"
+          style={{ background: 'linear-gradient(135deg, rgba(47,227,154,0.12), rgba(0,212,255,0.08))', border: '1px solid var(--green)' }}
+          onClick={() => navigate('/checkin?week=0')}
+        >
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--green)' }}>
+              Mesures de départ — S0
+            </div>
+            <div className="text-sm text-[var(--muted)]">Photos + composition avant le challenge · Référence pour le vote final</div>
+          </div>
+          <span className="text-2xl flex-shrink-0">📏</span>
+        </div>
+      )}
 
       {/* Check-in hebdomadaire */}
       {checkinDue && (

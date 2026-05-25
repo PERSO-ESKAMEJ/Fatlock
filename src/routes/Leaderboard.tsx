@@ -28,8 +28,11 @@ export default function Leaderboard() {
   async function handleExportRecap() {
     setExportLoading(true);
     try {
-      const photos = await getPhotosByWeek(profile.id, currentWeek);
-      const allPhotos = photos ? [photos] : [];
+      const allPhotos = [];
+      for (let w = 0; w <= currentWeek; w++) {
+        const p = await getPhotosByWeek(profile.id, w);
+        if (p) allPhotos.push(p);
+      }
       const recap = await generateRecapFile(
         profile,
         challenge.id,

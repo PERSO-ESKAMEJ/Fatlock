@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { getCurrentWeek } from '../store/useChallengeStore';
-import { savePhoto, getPhotosByWeek } from '../lib/db';
+import { savePhoto } from '../lib/db';
 import { buildWeeklyScore } from '../lib/scoring';
 import { BodyComposition } from '../types';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -14,10 +15,14 @@ import { useToast } from '../components/ui/Toast';
 export default function WeeklyCheckin() {
   const profile = useProfileStore((s) => s.profile)!;
   const challenge = useProfileStore((s) => s.challenge)!;
-  const { addBodyComposition, addWeeklyScore, bodyCompositions, dailyLogs, getLatestBodyComp } = useLogStore();
+  const { addBodyComposition, addWeeklyScore, bodyCompositions, dailyLogs } = useLogStore();
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const currentWeek = getCurrentWeek(challenge.startDate);
+  const isBaseline = searchParams.get('week') === '0';
+  const targetWeek = isBaseline ? 0 : currentWeek;
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [savedComp, setSavedComp] = useState<BodyComposition | null>(null);
   const [frontB64, setFrontB64] = useState('');
@@ -26,8 +31,10 @@ export default function WeeklyCheckin() {
   const [saving, setSaving] = useState(false);
 
   const userComps = bodyCompositions.filter((c) => c.userId === profile.id);
-  const previousComp = userComps.find((c) => c.weekNumber === currentWeek - 1) ?? userComps[userComps.length - 1];
-  const alreadyDone = userComps.some((c) => c.weekNumber === currentWeek);
+  const previousComp = isBaseline
+    ? undefined
+    : userComps.find((c) => c.weekNumber === currentWeek - 1) ?? userComps[userComps.length - 1];
+  const alreadyDone = userComps.some((c) => c.weekNumber === targetWeek);
 
   function handleCompSave(comp: BodyComposition) {
     setSavedComp(comp);
@@ -36,40 +43,39 @@ export default function WeeklyCheckin() {
 
   async function handleConfirm() {
     if (!savedComp || !frontB64 || !sideB64) {
-      showToast('Photos avant + profil obligatoires', 'error');
+      showToast('Photos face + profil obligatoires', 'error');
       return;
     }
     setSaving(true);
     try {
-      // Save photos to IndexedDB
       await savePhoto({
         userId: profile.id,
-        weekNumber: currentWeek,
+        weekNumber: targetWeek,
         capturedAt: new Date().toISOString(),
         frontBase64: frontB64,
         sideBase64: sideB64,
         backBase64: backB64 || undefined,
       });
 
-      // Save body composition
       addBodyComposition(savedComp);
 
-      // Build and save weekly score
-      const userLogs = dailyLogs.filter((l) => l.userId === profile.id);
-      const startComp = userComps.find((c) => c.weekNumber === 0) ?? userComps[0] ?? null;
-      const score = buildWeeklyScore(
-        profile.id,
-        currentWeek,
-        userLogs,
-        profile.intensity,
-        startComp,
-        savedComp,
-        0,
-        56
-      );
-      addWeeklyScore(score);
+      if (!isBaseline) {
+        const userLogs = dailyLogs.filter((l) => l.userId === profile.id);
+        const startComp = userComps.find((c) => c.weekNumber === 0) ?? userComps[0] ?? null;
+        const score = buildWeeklyScore(
+          profile.id,
+          currentWeek,
+          userLogs,
+          profile.intensity,
+          startComp,
+          savedComp,
+          0,
+          56
+        );
+        addWeeklyScore(score);
+      }
 
-      showToast(`Semaine ${currentWeek} validée ! 🔥`, 'success');
+      showToast(isBaseline ? 'Mesures de départ enregistrées !' : `Semaine ${currentWeek} validée !`, 'success');
       setStep(3);
     } catch (err) {
       showToast('Erreur lors de la sauvegarde', 'error');
@@ -81,18 +87,33 @@ export default function WeeklyCheckin() {
 
   if (alreadyDone && step !== 3) {
     return (
-      <PageWrapper title={`Check-in S${currentWeek}`}>
+      <PageWrapper title={isBaseline ? 'Mesures S0' : `Check-in S${currentWeek}`}>
         <div className="panel p-6 text-center">
           <div className="text-4xl mb-3">✅</div>
-          <div className="font-bold text-lg text-[var(--ink)] mb-1">Semaine {currentWeek} déjà validée</div>
-          <p className="text-sm text-[var(--muted)]">Reviens la semaine prochaine pour le prochain check-in.</p>
+          <div className="font-bold text-lg text-[var(--ink)] mb-1">
+            {isBaseline ? 'Mesures de départ déjà enregistrées' : `Semaine ${currentWeek} déjà validée`}
+          </div>
+          <p className="text-sm text-[var(--muted)]">
+            {isBaseline ? 'Tes mesures initiales S0 sont sauvegardées.' : 'Reviens la semaine prochaine pour le prochain check-in.'}
+          </p>
         </div>
       </PageWrapper>
     );
   }
 
+  const pageTitle = isBaseline ? 'Mesures de départ — S0' : `Check-in Semaine ${currentWeek}`;
+
   return (
-    <PageWrapper title={`Check-in Semaine ${currentWeek}`}>
+    <PageWrapper title={pageTitle}>
+      {isBaseline && (
+        <div
+          className="mb-4 px-3 py-2 rounded-lg text-xs"
+          style={{ background: 'rgba(47,227,154,0.07)', border: '1px solid rgba(47,227,154,0.2)', color: 'var(--muted)' }}
+        >
+          Ces mesures servent de référence de départ. Elles seront comparées à ta transformation finale pour le vote.
+        </div>
+      )}
+
       {/* Stepper */}
       <div className="flex items-center gap-2 mb-6">
         {[1, 2, 3].map((s) => (
@@ -121,7 +142,7 @@ export default function WeeklyCheckin() {
           <h2 className="font-bold text-[var(--ink)] mb-4">Composition corporelle</h2>
           <BodyCompForm
             userId={profile.id}
-            weekNumber={currentWeek}
+            weekNumber={targetWeek}
             previous={previousComp}
             onSave={handleCompSave}
           />
@@ -131,9 +152,11 @@ export default function WeeklyCheckin() {
       {/* Step 2: Photos */}
       {step === 2 && (
         <div className="space-y-5">
-          <h2 className="font-bold text-[var(--ink)]">Photos de progression</h2>
+          <h2 className="font-bold text-[var(--ink)]">
+            {isBaseline ? 'Photos de départ' : 'Photos de progression'}
+          </h2>
           <p className="text-xs text-[var(--muted)]">
-            Pose standardisée chaque semaine — même éclairage, même distance, vêtements de sport révélant l'abdomen.
+            Pose standardisée — même éclairage, même distance, vêtements de sport révélant l'abdomen.
           </p>
           <PhotoUploadCrop label="Face" required onSave={setFrontB64} existing={frontB64} />
           <PhotoUploadCrop label="Profil" required onSave={setSideB64} existing={sideB64} />
@@ -141,11 +164,7 @@ export default function WeeklyCheckin() {
 
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setStep(1)}>← Retour</Button>
-            <Button
-              className="flex-1"
-              onClick={() => setStep(3)}
-              disabled={!frontB64 || !sideB64}
-            >
+            <Button className="flex-1" onClick={() => setStep(3)} disabled={!frontB64 || !sideB64}>
               Continuer →
             </Button>
           </div>
@@ -155,7 +174,9 @@ export default function WeeklyCheckin() {
       {/* Step 3: Confirm */}
       {step === 3 && savedComp && (
         <div className="space-y-4">
-          <h2 className="font-bold text-[var(--ink)]">Confirmation — Semaine {currentWeek}</h2>
+          <h2 className="font-bold text-[var(--ink)]">
+            {isBaseline ? 'Confirmation — Mesures S0' : `Confirmation — Semaine ${currentWeek}`}
+          </h2>
 
           <div className="panel2 p-4 space-y-2 text-sm">
             <div className="flex justify-between">
@@ -185,14 +206,18 @@ export default function WeeklyCheckin() {
           {alreadyDone ? (
             <div className="panel p-4 text-center text-[var(--green)]">
               <div className="text-3xl mb-2">✅</div>
-              <div className="font-bold">Semaine {currentWeek} validée !</div>
-              <p className="text-sm text-[var(--muted)] mt-1">Exporte ton récap depuis le classement pour partager avec l'admin.</p>
+              <div className="font-bold">
+                {isBaseline ? 'Mesures S0 enregistrées !' : `Semaine ${currentWeek} validée !`}
+              </div>
+              {!isBaseline && (
+                <p className="text-sm text-[var(--muted)] mt-1">Exporte ton récap depuis le classement pour partager avec l'admin.</p>
+              )}
             </div>
           ) : (
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setStep(2)}>← Retour</Button>
               <Button className="flex-1" onClick={handleConfirm} loading={saving}>
-                Valider la semaine {currentWeek}
+                {isBaseline ? 'Enregistrer mes mesures S0' : `Valider la semaine ${currentWeek}`}
               </Button>
             </div>
           )}

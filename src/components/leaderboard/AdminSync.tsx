@@ -6,7 +6,6 @@ import { RecapFile, MasterLeaderboard, LeaderboardEntry } from '../../types';
 import { calcCurrentStreak, getTier, calcCompositeScore } from '../../lib/scoring';
 import { getCurrentWeek } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
-import { getPhotosByWeek } from '../../lib/db';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import DramaReveal from './DramaReveal';
@@ -53,13 +52,8 @@ export default function AdminSync() {
         let credScore: number | undefined;
         if (challenge.anthropicApiKey) {
           try {
-            const photos = await getPhotosByWeek(rProfile.id, currentWeek);
+            const photos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek) ?? null;
             if (photos) {
-              const prevPhotos = [];
-              for (let w = 1; w < currentWeek; w++) {
-                const p = await getPhotosByWeek(rProfile.id, w);
-                if (p) prevPhotos.push(p);
-              }
               const latestComp = bodyCompositions[bodyCompositions.length - 1];
               const prevComp = bodyCompositions.length > 1 ? bodyCompositions[bodyCompositions.length - 2] : null;
               const result = await runAIAnalysis({
