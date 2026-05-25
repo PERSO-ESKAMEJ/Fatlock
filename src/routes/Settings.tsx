@@ -166,7 +166,7 @@ export default function Settings() {
             className="w-full text-left font-mono text-xs p-2 rounded break-all transition-all hover:opacity-80"
             style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
             onClick={() => {
-              const base = `${window.location.origin}${window.location.pathname.replace(/\/$/, '')}`;
+              const base = window.location.origin + import.meta.env.BASE_URL;
               const link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}`;
               navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));
             }}
