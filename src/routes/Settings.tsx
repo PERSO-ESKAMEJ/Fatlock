@@ -31,7 +31,6 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const [age, setAge] = useState(profile?.age?.toString() ?? '');
-  const [weight, setWeight] = useState('');
   const [apiKey, setApiKey] = useState(challenge?.anthropicApiKey ?? '');
   const [trainingDays, setTrainingDays] = useState(profile?.trainingDays ?? {
     monday: null, tuesday: null, wednesday: null, thursday: null,
@@ -65,7 +64,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fatlock-backup-${profile.name.toLowerCase()}-${getTodayStr()}.json`;
+    a.download = `fatlock-backup-${profile?.name.toLowerCase()}-${getTodayStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Données exportées', 'success');
