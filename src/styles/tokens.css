@@ -1,0 +1,22 @@
+:root {
+  --bg: #04070f;
+  --bg2: #070c1a;
+  --panel: #0b1326;
+  --panel2: #0e1830;
+  --border: #1b294a;
+  --blue: #2f7bff;
+  --blue-bright: #4d92ff;
+  --cyan: #21e6ff;
+  --ink: #eaf1ff;
+  --muted: #7d8db4;
+  --muted2: #566186;
+  --gold: #ffc23d;
+  --red: #ff4d5e;
+  --green: #2fe39a;
+  --font-display: 'Anton', sans-serif;
+  --font-body: 'Archivo', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --safe: #2fe39a;
+  --standard: #2f7bff;
+  --flow: #ff4d5e;
+}
