@@ -5,7 +5,8 @@ import { useLogStore } from '../store/useLogStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { calculateTargets } from '../lib/nutrition';
 import { getRitualsForDay } from '../constants/rituals';
-import { calcDayRitualPoints, calcCurrentStreak, getTier, displayTier, calcCompositeScore } from '../lib/scoring';
+import { calcDayRitualPoints, calcCurrentStreak, getTier, calcCompositeScore } from '../lib/scoring';
+import { saveWeeklyPhoto, clearAllPhotos } from '../lib/db';
 import { DayType, Intensity, Sex, LeaderboardEntry, MasterLeaderboard } from '../types';
 import PageWrapper from '../components/layout/PageWrapper';
 
@@ -43,7 +44,7 @@ const FAKE_COMPETITORS: {
 export default function DevSeed() {
   const profile = useProfileStore((s) => s.profile);
   const challenge = useProfileStore((s) => s.challenge);
-  const { upsertDailyLog, addBodyComposition, addWeeklyScore } = useLogStore();
+  const { upsertDailyLog, addBodyComposition, addWeeklyScore, addAIResult } = useLogStore();
   const { setMasterLeaderboard } = useLeaderboardStore();
   const navigate = useNavigate();
 
@@ -60,7 +61,20 @@ export default function DevSeed() {
 
   const targets = calculateTargets(profile, profile.startWeight);
 
-  function seedCurrentUser() {
+  const AI_ANALYSES = [
+    'La progression physique est cohérente avec les rituels déclarés. La réduction de masse grasse est visible et crédible. Continue sur cette trajectoire.',
+    'Bonne cohérence globale. La masse musculaire se maintient malgré le déficit calorique. Quelques doutes mineurs sur la régularité des séances.',
+    'Progression solide. Les photos montrent une transformation visible. Le niveau de crédibilité reflète un engagement réel sur la semaine.',
+    'Légère stagnation détectée. La transformation ne correspond pas entièrement aux rituels déclarés. Sois plus rigoureux cette semaine.',
+    'Bonne semaine dans l\'ensemble. La masse grasse continue de diminuer. Maintiens l\'effort sur les rituels nutritionnels.',
+  ];
+
+  function makePlaceholderPhoto(week: number, label: string): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300"><rect width="200" height="300" fill="#0d1426"/><text x="100" y="140" text-anchor="middle" fill="#2f7bff" font-family="sans-serif" font-size="18" font-weight="bold">S${week}</text><text x="100" y="170" text-anchor="middle" fill="#6b7fa3" font-family="sans-serif" font-size="13">${label}</text></svg>`;
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  }
+
+  async function seedCurrentUser() {
     const totalDays = weeks * 7;
     const compliance = COMPLIANCE[profile!.intensity];
 
@@ -126,6 +140,31 @@ export default function DevSeed() {
 
       addWeeklyScore({ userId: profile!.id, weekNumber: w, egoPoints, streakBonus, aiBonus, transformationScore, regularityScore, totalComposite });
     }
+
+    // Résultats IA fictifs
+    for (let w = 1; w <= weeks; w++) {
+      addAIResult({
+        userId: profile!.id,
+        weekNumber: w,
+        credibilityScore: rndInt(55, 95),
+        analysis: AI_ANALYSES[(w - 1) % AI_ANALYSES.length],
+        generatedAt: new Date().toISOString(),
+      });
+    }
+
+    // Photos placeholder
+    const photoPromises = [];
+    for (let w = 1; w <= weeks; w++) {
+      photoPromises.push(saveWeeklyPhoto({
+        userId: profile!.id,
+        weekNumber: w,
+        capturedAt: new Date().toISOString(),
+        frontBase64: makePlaceholderPhoto(w, 'Face'),
+        sideBase64: makePlaceholderPhoto(w, 'Profil'),
+        backBase64: makePlaceholderPhoto(w, 'Dos'),
+      }));
+    }
+    return Promise.all(photoPromises);
   }
 
   function buildLeaderboard() {
@@ -186,7 +225,6 @@ export default function DevSeed() {
       e.previousRank = rndInt(1, entries.length);
     });
 
-    const top = entries[0];
     const lb: MasterLeaderboard = {
       challengeId: challenge!.id,
       updatedAt: new Date().toISOString(),
@@ -202,15 +240,16 @@ export default function DevSeed() {
     setMasterLeaderboard(lb);
   }
 
-  function handleSeed() {
-    seedCurrentUser();
+  async function handleSeed() {
+    await seedCurrentUser();
     buildLeaderboard();
     setSeeded(true);
   }
 
-  function handleClear() {
+  async function handleClear() {
     useLogStore.getState().reset();
     useLeaderboardStore.getState().reset();
+    await clearAllPhotos();
     setSeeded(false);
   }
 
