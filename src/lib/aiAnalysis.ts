@@ -1,7 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { AIAnalysisResult, BodyComposition, WeeklyPhoto } from '../types';
 
-interface AnalysisInput {
+interface AIAnalysisParams {
   userId: string;
   weekNumber: number;
   prevCompo: BodyComposition | null;
@@ -10,133 +9,90 @@ interface AnalysisInput {
   apiKey: string;
 }
 
-interface RawAnalysis {
-  credibilityScore: number;
-  bodyCompositionCredibility: string;
-  visualConsistency: string;
-  progressObservations: string;
-  recommendations: string;
-  overallAnalysis: string;
+function parseBase64(dataUrl: string): { mediaType: string; data: string } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error('Format photo invalide');
+  return { mediaType: match[1], data: match[2] };
 }
 
-export async function runAIAnalysis(input: AnalysisInput): Promise<AIAnalysisResult> {
-  const { userId, weekNumber, prevCompo, currCompo, photo, apiKey } = input;
+export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
+  const { userId, weekNumber, prevCompo, currCompo, photo, apiKey } = params;
 
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const delta = prevCompo
+    ? `Évolution depuis S${weekNumber - 1} :
+- Poids : ${(currCompo.weightKg - prevCompo.weightKg).toFixed(1)} kg
+- Masse grasse : ${(currCompo.fatMassKg - prevCompo.fatMassKg).toFixed(1)} kg
+- Masse musculaire : ${(currCompo.muscleMassKg - prevCompo.muscleMassKg).toFixed(1)} kg`
+    : "Première mesure — pas d'historique disponible.";
 
-  const compoDiff = prevCompo
-    ? {
-        weightChange: +(currCompo.weightKg - prevCompo.weightKg).toFixed(2),
-        muscleDelta: +(currCompo.muscleMassKg - prevCompo.muscleMassKg).toFixed(2),
-        fatDelta: +(currCompo.fatMassKg - prevCompo.fatMassKg).toFixed(2),
-        waterDelta: +(currCompo.waterPercent - prevCompo.waterPercent).toFixed(1),
-      }
-    : null;
+  const prompt = `Tu es un expert en transformation physique pour une compétition sur 8 semaines.
 
-  const systemPrompt = `Tu es un expert en analyse de composition corporelle et de transformation physique.
-Tu analyses des photos de progression hebdomadaire et des données de composition corporelle pour évaluer la crédibilité et la cohérence des résultats déclarés.
-Tu réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.`;
+Semaine ${weekNumber}/8 — Composition corporelle déclarée :
+- Poids : ${currCompo.weightKg} kg
+- Masse grasse : ${currCompo.fatMassKg} kg (${((currCompo.fatMassKg / currCompo.weightKg) * 100).toFixed(1)}%)
+- Masse musculaire : ${currCompo.muscleMassKg} kg
+- Eau : ${currCompo.waterPercent?.toFixed(0) ?? 'N/A'}%
 
-  const userPrompt = `Analyse la progression de la semaine ${weekNumber}.
+${delta}
 
-Données composition corporelle actuelles:
-- Poids: ${currCompo.weightKg} kg
-- Masse musculaire: ${currCompo.muscleMassKg} kg
-- Masse grasse: ${currCompo.fatMassKg} kg
-- Eau: ${currCompo.waterPercent}%
-- Masse osseuse: ${currCompo.boneMassKg} kg
+Analyse les photos jointes. Évalue la cohérence entre les mesures déclarées et la transformation visible.
 
-${
-  compoDiff
-    ? `Évolution vs semaine précédente:
-- Variation poids: ${compoDiff.weightChange > 0 ? '+' : ''}${compoDiff.weightChange} kg
-- Variation musculaire: ${compoDiff.muscleDelta > 0 ? '+' : ''}${compoDiff.muscleDelta} kg
-- Variation graisseuse: ${compoDiff.fatDelta > 0 ? '+' : ''}${compoDiff.fatDelta} kg
-- Variation eau: ${compoDiff.waterDelta > 0 ? '+' : ''}${compoDiff.waterDelta}%`
-    : 'Première mesure disponible.'
-}
+Réponds UNIQUEMENT en JSON strict, sans markdown :
+{"credibilityScore": <entier 0-100>, "analysis": "<2-3 phrases en français, directes et précises>"}
 
-Évalue la crédibilité de ces données par rapport aux photos fournies.
+Barème du score :
+85-100 : transformation clairement visible, cohérence totale
+65-84 : bonne cohérence, légères incertitudes
+45-64 : cohérence partielle, doutes notables
+25-44 : incohérences importantes
+0-24 : déclarations très douteuses`;
 
-Réponds en JSON avec exactement ce format:
-{
-  "credibilityScore": <0-100>,
-  "bodyCompositionCredibility": "<évaluation en 1-2 phrases>",
-  "visualConsistency": "<cohérence visuelle photo/données>",
-  "progressObservations": "<observations sur la progression>",
-  "recommendations": "<recommandations>",
-  "overallAnalysis": "<analyse globale en 2-3 phrases>"
-}`;
-
-  const imageContent: Anthropic.ImageBlockParam[] = [];
-
-  if (photo.frontBase64) {
-    imageContent.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: 'image/jpeg',
-        data: photo.frontBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
-      },
-    });
-  }
+  const images: object[] = [];
+  const front = parseBase64(photo.frontBase64);
+  images.push({ type: 'image', source: { type: 'base64', media_type: front.mediaType, data: front.data } });
 
   if (photo.sideBase64) {
-    imageContent.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: 'image/jpeg',
-        data: photo.sideBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
-      },
-    });
+    const side = parseBase64(photo.sideBase64);
+    images.push({ type: 'image', source: { type: 'base64', media_type: side.mediaType, data: side.data } });
   }
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [
-      {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{
         role: 'user',
-        content: [
-          ...imageContent,
-          { type: 'text', text: userPrompt },
-        ],
-      },
-    ],
+        content: [...images, { type: 'text', text: prompt }],
+      }],
+    }),
   });
 
-  const textContent = response.content.find((c) => c.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error("Pas de réponse texte de l'IA");
+  if (!res.ok) {
+    throw new Error(`Erreur API Anthropic (${res.status}): ${await res.text()}`);
   }
 
-  let parsed: RawAnalysis;
+  const json = await res.json();
+  const text: string = json.content?.[0]?.text ?? '';
+
+  let parsed: { credibilityScore: number; analysis: string };
   try {
-    parsed = JSON.parse(textContent.text) as RawAnalysis;
+    parsed = JSON.parse(text);
   } catch {
-    throw new Error("Impossible de parser la réponse JSON de l'IA");
+    parsed = { credibilityScore: 50, analysis: text };
   }
-
-  const credibilityScore = Math.max(0, Math.min(100, Math.round(parsed.credibilityScore)));
-  const analysis = [
-    parsed.overallAnalysis,
-    '',
-    `**Crédibilité composition:** ${parsed.bodyCompositionCredibility}`,
-    '',
-    `**Cohérence visuelle:** ${parsed.visualConsistency}`,
-    '',
-    `**Observations:** ${parsed.progressObservations}`,
-    '',
-    `**Recommandations:** ${parsed.recommendations}`,
-  ].join('\n');
 
   return {
     userId,
     weekNumber,
-    credibilityScore,
-    analysis,
+    credibilityScore: Math.max(0, Math.min(100, Math.round(parsed.credibilityScore))),
+    analysis: parsed.analysis,
     generatedAt: new Date().toISOString(),
   };
 }
