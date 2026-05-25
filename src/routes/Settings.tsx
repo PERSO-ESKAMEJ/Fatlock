@@ -23,7 +23,7 @@ const DAY_TYPES: { value: DayType | ''; label: string }[] = [
 ];
 
 export default function Settings() {
-  const { profile, challenge, updateProfile, updateChallenge, reset: resetProfile } = useProfileStore();
+  const { profile, challenge, entries, activeId, switchEntry, updateProfile, updateChallenge, reset: resetProfile } = useProfileStore();
   const { reset: resetLogs } = useLogStore();
   const { reset: resetChallenge } = useChallengeStore();
   const { reset: resetLeaderboard } = useLeaderboardStore();
@@ -180,6 +180,35 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Groups */}
+      <div className="panel p-4 mb-4">
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Mes groupes</div>
+        <div className="space-y-2 mb-3">
+          {entries.map((entry) => (
+            <div
+              key={entry.profile.id}
+              className="flex items-center justify-between p-3 rounded-lg"
+              style={{ background: 'var(--panel2)', border: `1px solid ${entry.profile.id === activeId ? 'var(--blue)' : 'var(--border)'}` }}
+            >
+              <div>
+                <div className="text-sm font-bold text-[var(--ink)]">{entry.profile.name}</div>
+                <div className="text-xs text-[var(--muted)]">{entry.challenge.groupName}</div>
+              </div>
+              {entry.profile.id === activeId ? (
+                <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: 'var(--blue)', color: 'white' }}>Actif</span>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => { switchEntry(entry.profile.id); navigate('/dashboard'); }}>
+                  Basculer
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+        <Button variant="ghost" className="w-full" onClick={() => navigate('/?add=1')}>
+          + Rejoindre / Créer un groupe
+        </Button>
+      </div>
+
       {/* Export */}
       <div className="panel p-4 mb-4">
         <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Export des données</div>
@@ -194,20 +223,23 @@ export default function Settings() {
           Zone Danger
         </div>
         <p className="text-xs text-[var(--muted)] mb-3">
-          Supprime toutes les données locales. Cette action est irréversible.
+          Quitte le groupe actif et supprime ses données locales. Si c'est ton seul groupe, toutes les données sont effacées.
         </p>
         <Button variant="danger" className="w-full" onClick={() => setShowReset(true)}>
-          Réinitialiser les données
+          Quitter ce groupe
         </Button>
       </div>
 
-      <Modal open={showReset} onClose={() => setShowReset(false)} title="Réinitialiser ?">
+      <Modal open={showReset} onClose={() => setShowReset(false)} title="Quitter ce groupe ?">
+        <p className="text-sm text-[var(--muted)] mb-1">
+          Groupe : <span className="font-bold text-[var(--ink)]">{challenge.groupName}</span>
+        </p>
         <p className="text-sm text-[var(--muted)] mb-4">
-          Toutes tes données FATLOCK seront supprimées de cet appareil. Cette action est définitive.
+          Tes données pour ce groupe seront supprimées de cet appareil. Cette action est définitive.
         </p>
         <div className="flex gap-3">
           <Button variant="ghost" className="flex-1" onClick={() => setShowReset(false)}>Annuler</Button>
-          <Button variant="danger" className="flex-1" onClick={handleReset}>Confirmer la suppression</Button>
+          <Button variant="danger" className="flex-1" onClick={handleReset}>Confirmer</Button>
         </div>
       </Modal>
     </PageWrapper>

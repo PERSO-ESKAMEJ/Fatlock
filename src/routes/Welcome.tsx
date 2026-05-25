@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { calculateTargets, ACTIVITY_LEVELS } from '../lib/nutrition';
 import { UserProfile, ChallengeConfig, Sex, Intensity, DayType } from '../types';
@@ -35,8 +35,10 @@ const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 type TrainingDays = UserProfile['trainingDays'];
 
 export default function Welcome() {
-  const { profile, setProfile, setChallenge } = useProfileStore();
+  const { profile, addEntry } = useProfileStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isAdding = searchParams.get('add') === '1';
 
   const [step, setStep] = useState<'landing' | 'profile' | 'confirm-nutrition' | 'challenge'>('landing');
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -102,8 +104,7 @@ export default function Welcome() {
       participantIds: [profileId],
     };
 
-    setProfile(newProfile);
-    setChallenge(challenge);
+    addEntry(newProfile, challenge);
     navigate('/dashboard');
   }
 
@@ -114,7 +115,7 @@ export default function Welcome() {
     ? calculateTargets({ ...tempProfile, id: '', name, startWeight: parseFloat(weight), trainingDays, groupCode: '', isAdmin: false, createdAt: '' }, parseFloat(weight))
     : null;
 
-  if (profile) {
+  if (profile && !isAdding) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
         <div className="text-center mb-10">
@@ -123,9 +124,14 @@ export default function Welcome() {
           </h1>
           <p className="text-[var(--muted)]">Réveillez votre Ego Abdominal</p>
         </div>
-        <Button size="lg" onClick={() => navigate('/dashboard')}>
-          Reprendre → {profile.name}
-        </Button>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Button size="lg" onClick={() => navigate('/dashboard')}>
+            Reprendre → {profile.name}
+          </Button>
+          <Button size="lg" variant="ghost" onClick={() => navigate('/?add=1')}>
+            + Rejoindre un autre groupe
+          </Button>
+        </div>
       </div>
     );
   }

@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../../store/useProfileStore';
 
 const NAV_ITEMS = [
@@ -12,7 +13,18 @@ const NAV_ITEMS = [
 
 export default function NavBar() {
   const profile = useProfileStore((s) => s.profile);
+  const entries = useProfileStore((s) => s.entries);
+  const activeId = useProfileStore((s) => s.activeId);
+  const switchEntry = useProfileStore((s) => s.switchEntry);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  function handleSwitch(profileId: string) {
+    switchEntry(profileId);
+    setOpen(false);
+    navigate('/dashboard');
+  }
 
   return (
     <>
@@ -43,17 +55,59 @@ export default function NavBar() {
             </NavLink>
           ))}
         </div>
-        <NavLink
-          to="/parametres"
-          className="flex items-center gap-2 text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
-        >
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ background: 'var(--blue)', color: 'white' }}
+
+        {/* Avatar + group switcher */}
+        <div className="relative">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
           >
-            {profile?.name?.charAt(0).toUpperCase()}
-          </div>
-        </NavLink>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{ background: 'var(--blue)', color: 'white' }}
+            >
+              {profile?.name?.charAt(0).toUpperCase()}
+            </div>
+            {entries.length > 1 && (
+              <span className="text-[var(--muted)] text-xs">▾</span>
+            )}
+          </button>
+
+          {open && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+              <div
+                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden z-50"
+                style={{ background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+              >
+                {entries.map((entry) => (
+                  <button
+                    key={entry.profile.id}
+                    onClick={() => handleSwitch(entry.profile.id)}
+                    className="w-full px-4 py-3 text-left hover:bg-[var(--panel2)] flex items-center justify-between transition-colors"
+                  >
+                    <div>
+                      <div className="text-sm font-bold text-[var(--ink)]">{entry.profile.name}</div>
+                      <div className="text-xs text-[var(--muted)]">{entry.challenge.groupName}</div>
+                    </div>
+                    {entry.profile.id === activeId && (
+                      <span className="text-xs font-bold" style={{ color: 'var(--green)' }}>✓</span>
+                    )}
+                  </button>
+                ))}
+                <div style={{ borderTop: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => { setOpen(false); navigate('/?add=1'); }}
+                    className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-wider hover:bg-[var(--panel2)] transition-colors"
+                    style={{ color: 'var(--blue-bright)' }}
+                  >
+                    + Rejoindre un groupe
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </nav>
 
       {/* Mobile bottom bar */}
