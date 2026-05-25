@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
+import { useLogStore } from '../store/useLogStore';
 import PageWrapper from '../components/layout/PageWrapper';
 import DailyCodeUnlock from '../components/dashboard/DailyCodeUnlock';
 import RankCard from '../components/dashboard/RankCard';
@@ -10,7 +12,10 @@ import { getCurrentWeek } from '../store/useChallengeStore';
 export default function Dashboard() {
   const profile = useProfileStore((s) => s.profile)!;
   const challenge = useProfileStore((s) => s.challenge)!;
+  const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
+  const navigate = useNavigate();
   const currentWeek = getCurrentWeek(challenge.startDate);
+  const checkinDue = currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
 
   const greeting = profile.sex === 'M'
     ? `Prêt à dominer, ${profile.name} ?`
@@ -42,6 +47,23 @@ export default function Dashboard() {
       <div className="mb-4">
         <CountdownBar />
       </div>
+
+      {/* Check-in hebdomadaire */}
+      {checkinDue && (
+        <div
+          className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:opacity-90"
+          style={{ background: 'linear-gradient(135deg, rgba(47,123,255,0.15), rgba(0,212,255,0.1))', border: '1px solid var(--blue)' }}
+          onClick={() => navigate('/checkin')}
+        >
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--blue-bright)' }}>
+              Check-in Semaine {currentWeek}
+            </div>
+            <div className="text-sm text-[var(--muted)]">Photos · Composition corporelle · Analyse IA</div>
+          </div>
+          <span className="text-2xl flex-shrink-0">📸</span>
+        </div>
+      )}
 
       {/* Grid: nutrition + rituals */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

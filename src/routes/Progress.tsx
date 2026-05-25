@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
+import { getCurrentWeek } from '../store/useChallengeStore';
 import { calculateTargets } from '../lib/nutrition';
 import { getPhotosByWeek } from '../lib/db';
 import { WeeklyPhoto } from '../types';
@@ -16,6 +18,9 @@ export default function Progress() {
   const challenge = useProfileStore((s) => s.challenge)!;
   const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
   const aiResults = useLogStore((s) => s.aiResults).filter((r) => r.userId === profile.id);
+  const navigate = useNavigate();
+  const currentWeek = getCurrentWeek(challenge.startDate);
+  const checkinDue = currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
@@ -66,6 +71,23 @@ export default function Progress() {
 
   return (
     <PageWrapper title="Progression">
+      {/* Check-in CTA */}
+      {checkinDue && (
+        <div
+          className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:opacity-90 transition-all"
+          style={{ background: 'linear-gradient(135deg, rgba(47,123,255,0.15), rgba(0,212,255,0.1))', border: '1px solid var(--blue)' }}
+          onClick={() => navigate('/checkin')}
+        >
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--blue-bright)' }}>
+              Check-in Semaine {currentWeek} disponible
+            </div>
+            <div className="text-sm text-[var(--muted)]">Photos · Composition corporelle · Analyse IA</div>
+          </div>
+          <span className="text-2xl flex-shrink-0">📸</span>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: 'var(--panel)' }}>
         {tabs.map((tab) => (
