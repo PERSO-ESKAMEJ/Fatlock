@@ -133,6 +133,9 @@ export default function PhotoUploadCrop({ label, onSave, existing, required }: P
               style={{ maxHeight: 400, maxWidth: '100%' }}
             />
           </ReactCrop>
+          <div className="px-3 py-2 rounded-lg text-xs leading-relaxed" style={{ background: 'rgba(47,227,154,0.06)', border: '1px solid rgba(47,227,154,0.2)', color: 'var(--muted)' }}>
+            <span style={{ color: 'var(--green)' }}>🔒 Confidentialité —</span> Seule la zone rognée est sauvegardée. L'original (avec le visage) est immédiatement effacé de la mémoire et n'est jamais stocké. Tes photos restent sur cet appareil et, si Supabase est activé, dans le projet privé du groupe — accessible uniquement aux membres via la clé du groupe. L'analyse IA (optionnelle, lancée par l'admin) transmet uniquement la zone rognée à l'API Anthropic pour évaluer la progression physique.
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleSaveCrop} disabled={!completedCrop} size="sm">
               Confirmer
