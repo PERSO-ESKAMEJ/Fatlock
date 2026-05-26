@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { getCurrentWeek, getChallengeEndDate } from '../store/useChallengeStore';
+import { getCurrentWeek, getChallengeEndDate, getChallengeState, getDaysUntilStart } from '../store/useChallengeStore';
 import { generateRecapFile, exportRecapAsFile } from '../lib/recap';
 import { getPhotosByWeek } from '../lib/db';
 import { supabase } from '../lib/supabase';
@@ -25,8 +26,33 @@ export default function Leaderboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [lbLoading, setLbLoading] = useState(false);
 
+  const navigate = useNavigate();
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const challengeState = getChallengeState(challenge.startDate, durationWeeks);
+
+  if (challengeState === 'pending') {
+    const daysLeft = getDaysUntilStart(challenge.startDate);
+    return (
+      <PageWrapper title="Classement">
+        <div className="panel p-8 text-center mt-4">
+          <div className="text-3xl mb-3">🔒</div>
+          <div className="font-display text-xl uppercase tracking-wider text-[var(--ink)] mb-2">J-{daysLeft}</div>
+          <div className="font-bold text-[var(--ink)] mb-1">Challenge pas encore commencé</div>
+          <div className="text-sm text-[var(--muted)] mb-5">
+            Le classement sera disponible dès le {new Date(challenge.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+          </div>
+          <button
+            onClick={() => navigate('/checkin?week=0')}
+            className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+            style={{ background: 'var(--blue)', color: 'white' }}
+          >
+            Enregistrer mes mesures S0 →
+          </button>
+        </div>
+      </PageWrapper>
+    );
+  }
 
   async function handleExportRecap() {
     setExportLoading(true);

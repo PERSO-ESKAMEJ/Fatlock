@@ -20,8 +20,9 @@ export default function Progress() {
   const aiResults = useLogStore((s) => s.aiResults).filter((r) => r.userId === profile.id);
   const navigate = useNavigate();
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
-  const checkinDue = getChallengeState(challenge.startDate, durationWeeks) === 'active' && currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  const checkinDue = challengeState === 'active' && currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
@@ -39,6 +40,32 @@ export default function Progress() {
     }
     loadPhotos();
   }, [profile.id, totalWeeks]);
+
+  if (challengeState === 'pending') {
+    const s0Done = bodyComps.some((c) => c.weekNumber === 0);
+    return (
+      <PageWrapper title="Progression">
+        <div className="panel p-8 text-center mt-4">
+          <div className="text-3xl mb-3">{s0Done ? '📊' : '📏'}</div>
+          <div className="font-bold text-[var(--ink)] mb-1">
+            {s0Done ? 'Mesures S0 enregistrées' : 'Challenge pas encore commencé'}
+          </div>
+          <div className="text-sm text-[var(--muted)] mb-5">
+            {s0Done
+              ? 'Les graphiques de progression seront disponibles dès le J1 du challenge.'
+              : 'Enregistre tes mesures de départ (S0) avant le début du challenge.'}
+          </div>
+          <button
+            onClick={() => navigate('/checkin?week=0')}
+            className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+            style={{ background: s0Done ? 'var(--panel2)' : 'var(--blue)', border: s0Done ? '1px solid var(--border)' : 'none', color: s0Done ? 'var(--muted)' : 'white' }}
+          >
+            {s0Done ? 'Modifier mes mesures S0 →' : 'Enregistrer mes mesures S0 →'}
+          </button>
+        </div>
+      </PageWrapper>
+    );
+  }
 
   const targets = calculateTargets(profile, profile.startWeight);
 
