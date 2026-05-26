@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
-import { getCurrentWeek } from '../store/useChallengeStore';
+import { getCurrentWeek, getChallengeState } from '../store/useChallengeStore';
 import { savePhoto } from '../lib/db';
 import { buildWeeklyScore } from '../lib/scoring';
 import { BodyComposition } from '../types';
@@ -19,7 +19,9 @@ export default function WeeklyCheckin() {
   const { showToast } = useToast();
   const [searchParams] = useSearchParams();
 
+  const navigate = useNavigate();
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const isBaseline = searchParams.get('week') === '0';
   const targetWeek = isBaseline ? 0 : currentWeek;
@@ -97,6 +99,28 @@ export default function WeeklyCheckin() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (challengeState === 'pending' && !isBaseline) {
+    return (
+      <PageWrapper title="Check-in">
+        <div className="panel p-8 text-center mt-4">
+          <div className="text-3xl mb-3">🔒</div>
+          <div className="font-bold text-[var(--ink)] mb-1">Challenge pas encore commencé</div>
+          <div className="text-sm text-[var(--muted)] mb-5">
+            Les check-ins hebdomadaires seront disponibles dès le J1.
+            Tu peux dès maintenant enregistrer tes mesures de départ.
+          </div>
+          <button
+            onClick={() => navigate('/checkin?week=0')}
+            className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+            style={{ background: 'var(--blue)', color: 'white' }}
+          >
+            Enregistrer mes mesures S0 →
+          </button>
+        </div>
+      </PageWrapper>
+    );
   }
 
   if (alreadyDone && step !== 3) {

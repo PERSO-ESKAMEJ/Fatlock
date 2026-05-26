@@ -369,7 +369,7 @@ export default function FinalVote() {
           {profile.isAdmin ? (
             <>
               <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
-                Chaque participant choisira la transformation S0→S8 la plus marquante. Les noms sont masqués pendant le vote.
+                Chaque participant choisira la transformation S0→S{durationWeeks} la plus marquante. Les noms sont masqués pendant le vote.
                 Assure-toi d'avoir généré le classement d'abord.
               </p>
               <Button onClick={handleGeneratePackage} loading={generating} className="w-full">
