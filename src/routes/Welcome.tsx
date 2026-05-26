@@ -85,6 +85,8 @@ export default function Welcome() {
     thursday: null, friday: 'muscu_j3', saturday: 'cardio', sunday: 'repos',
   });
 
+  const [hintOpen, setHintOpen] = useState(false);
+
   // Challenge fields
   const [durationWeeks, setDurationWeeks] = useState(dwParam ? parseInt(dwParam) : 8);
   const [stake, setStake] = useState(stakeParam || '20');
@@ -274,10 +276,12 @@ export default function Welcome() {
     ][profileStep - 1];
 
     function goBack() {
+      setHintOpen(false);
       if (profileStep === 1) setStep(mode === 'join' ? 'landing' : 'type-select');
       else setProfileStep((p: number) => p - 1);
     }
     function goNext() {
+      setHintOpen(false);
       if (profileStep < PROFILE_STEPS) setProfileStep((p: number) => p + 1);
       else handleProfileSave();
     }
@@ -290,6 +294,15 @@ export default function Welcome() {
       { value: 1.9,   emoji: '🏆', label: 'Extrêmement actif',   sub: 'Athlète / travail physique' },
     ];
 
+    const HINTS: Record<number, string> = {
+      1: 'Hommes et femmes ont des formules de métabolisme de base différentes (Mifflin-St Jeor). Ce choix influence ton objectif calorique quotidien.',
+      2: 'Ce nom apparaîtra dans le classement du groupe. Tu peux utiliser un pseudo — il ne sera pas modifiable facilement après.',
+      3: 'Ces trois données calculent ton BMR (calories brûlées au repos) et ton TDEE (dépense totale journalière). Plus c\'est précis, plus ton plan nutritionnel sera juste.',
+      4: 'Ton niveau d\'activité hors entraînements FATLOCK. Il multiplie ton BMR pour obtenir ton TDEE réel. Une erreur ici sous- ou sur-estime tes besoins caloriques.',
+      5: 'Définit la vitesse de ta transformation et ton multiplicateur de points. SAFE = progression douce. STANDARD = protocole complet. FLOW = mode extrême, l\'IA est plus sévère et un écart te coûte plus cher en points.',
+      6: 'Sert à déterminer quels rituels s\'appliquent chaque jour (séance muscu vs cardio vs repos). Modifiable à tout moment dans Paramètres.',
+    };
+
     return (
       <div className="min-h-screen flex flex-col px-4 pt-8 pb-10 max-w-lg mx-auto animate-fade-in">
 
@@ -301,15 +314,20 @@ export default function Welcome() {
           />
         </div>
 
-        {/* Step content */}
-        <div className="flex-1">
+        {/* Step content — centré verticalement */}
+        <div className="flex-1 flex flex-col justify-center">
 
           {/* Étape 1 — Sexe */}
           {profileStep === 1 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Tu es…</h2>
-              <p className="text-sm text-[var(--muted)] mb-8">Pour calibrer ton métabolisme de base.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Tu es…</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Pour calibrer ton métabolisme de base.</p>
+              {hintOpen && <div className="mb-6 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[1]}</div>}
+              {!hintOpen && <div className="mb-5" />}
               <div className="grid grid-cols-2 gap-3">
                 {(['M', 'F'] as Sex[]).map((s) => (
                   <button
@@ -333,8 +351,13 @@ export default function Welcome() {
           {profileStep === 2 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton nom</h2>
-              <p className="text-sm text-[var(--muted)] mb-8">Prénom ou pseudo — ce que le classement affichera.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Ton nom</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Prénom ou pseudo — ce que le classement affichera.</p>
+              {hintOpen && <div className="mb-5 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[2]}</div>}
+              {!hintOpen && <div className="mb-5" />}
               <input
                 type="text"
                 value={name}
@@ -352,8 +375,13 @@ export default function Welcome() {
           {profileStep === 3 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton corps</h2>
-              <p className="text-sm text-[var(--muted)] mb-8">Sert à calculer ton BMR et tes objectifs caloriques.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Ton corps</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Sert à calculer ton BMR et tes objectifs caloriques.</p>
+              {hintOpen && <div className="mb-4 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[3]}</div>}
+              {!hintOpen && <div className="mb-5" />}
               <div className="space-y-4">
                 <div>
                   <label>Âge</label>
@@ -375,8 +403,13 @@ export default function Welcome() {
           {profileStep === 4 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton activité</h2>
-              <p className="text-sm text-[var(--muted)] mb-6">Hors séances FATLOCK — ton quotidien général.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Ton activité</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Hors séances FATLOCK — ton quotidien général.</p>
+              {hintOpen && <div className="mb-4 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[4]}</div>}
+              {!hintOpen && <div className="mb-3" />}
               <div className="space-y-2">
                 {ACTIVITY_CARDS.map((a) => (
                   <button
@@ -404,8 +437,13 @@ export default function Welcome() {
           {profileStep === 5 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton mode</h2>
-              <p className="text-sm text-[var(--muted)] mb-6">Définit ton déficit calorique et le multiplicateur de points.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Ton mode</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Définit ton déficit calorique et le multiplicateur de points.</p>
+              {hintOpen && <div className="mb-4 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[5]}</div>}
+              {!hintOpen && <div className="mb-3" />}
               <div className="space-y-3">
                 {INTENSITY_OPTIONS.map((opt) => (
                   <button
@@ -435,8 +473,13 @@ export default function Welcome() {
           {profileStep === 6 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
-              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton planning</h2>
-              <p className="text-sm text-[var(--muted)] mb-6">Personnalisable dans Paramètres à tout moment.</p>
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)]">Ton planning</h2>
+                <button onClick={() => setHintOpen((h: boolean) => !h)} className="w-7 h-7 rounded-full text-sm font-bold flex-shrink-0 mt-1" style={{ background: hintOpen ? 'var(--blue)' : 'var(--panel2)', border: '1px solid var(--border)', color: hintOpen ? 'white' : 'var(--muted)' }}>?</button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">Personnalisable dans Paramètres à tout moment.</p>
+              {hintOpen && <div className="mb-4 p-3 rounded-lg text-sm text-[var(--ink)]" style={{ background: 'rgba(47,123,255,0.08)', border: '1px solid rgba(47,123,255,0.25)' }}>{HINTS[6]}</div>}
+              {!hintOpen && <div className="mb-3" />}
               <div className="space-y-2">
                 {DAYS.map((day, i) => (
                   <div key={day} className="flex items-center gap-3">
