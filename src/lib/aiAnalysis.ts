@@ -26,26 +26,55 @@ function buildPrompt(
 
   // ── Semaine 1 : évaluation des mesures initiales uniquement ────────────────
   if (weekNumber === 1 || !prevCompo) {
-    const photoContext = hasPrevPhoto
-      ? `Tu reçois DEUX photos : d'abord une photo S0 (prise avant le début du challenge), puis une photo S1 (après la première semaine). Concentre-toi sur la photo S1 pour évaluer les mesures actuelles. La différence entre S0 et S1 en une semaine est minime — ne l'évalue pas.`
-      : `Tu reçois une seule photo prise en semaine 1.`;
+    if (hasPrevPhoto) {
+      // S0 + S1 disponibles : comparaison possible mais transformation limitée en 1 semaine
+      const deltaWeight = (currCompo.weightKg - prevCompo!.weightKg).toFixed(1);
+      const deltaFat = (currCompo.fatMassKg - prevCompo!.fatMassKg).toFixed(1);
+      const prevFatPct = ((prevCompo!.fatMassKg / prevCompo!.weightKg) * 100).toFixed(1);
 
+      return `Tu es un expert en composition corporelle.
+
+Semaine 1/8 — Tu reçois DEUX photos : S0 (avant le challenge) puis S1 (fin de la première semaine).
+
+Mesures S0 → S1 :
+- Poids : ${prevCompo!.weightKg} kg → ${currCompo.weightKg} kg (${parseFloat(deltaWeight) > 0 ? '+' : ''}${deltaWeight} kg)
+- Masse grasse : ${prevCompo!.fatMassKg} kg (${prevFatPct}%) → ${currCompo.fatMassKg} kg (${fatPct}%) (${parseFloat(deltaFat) > 0 ? '+' : ''}${deltaFat} kg)
+- Masse musculaire : ${prevCompo!.muscleMassKg} kg → ${currCompo.muscleMassKg} kg
+
+Contexte : c'est la première semaine du challenge. Une transformation VISIBLE en 7 jours est physiologiquement limitée. Une variation de poids importante peut être due à la rétention d'eau — ne la pénalise pas automatiquement.
+
+Évalue :
+1. Les mesures de base S0 sont-elles plausibles au regard de la photo S0 ?
+2. Les mesures S1 sont-elles cohérentes avec la photo S1 ?
+3. Si une évolution significative est déclarée, est-elle visible entre les deux photos, ou peut-elle s'expliquer par de la rétention d'eau ?
+
+Réponds UNIQUEMENT en JSON strict, sans markdown :
+{"credibilityScore": <entier 0-100>, "analysis": "<2-3 phrases en français, directes et précises>"}
+
+Barème :
+85-100 : mesures cohérentes sur les deux semaines, évolution plausible
+65-84 : bonne cohérence globale, légères incertitudes
+45-64 : quelques incohérences mais dans des marges acceptables pour S1
+25-44 : incohérences notables, évolution déclarée peu crédible même en tenant compte de la rétention d'eau
+0-24 : mesures très peu crédibles au regard des deux photos`;
+    }
+
+    // Pas de photo S0 — évaluation de la plausibilité des mesures S1 uniquement
     return `Tu es un expert en composition corporelle.
 
-Semaine 1/8 — ${photoContext}
+Semaine 1/8 — Tu reçois une seule photo (S1, fin de la première semaine). Pas de photo de référence S0 disponible.
 
-Mesures de départ déclarées :
+Mesures déclarées :
 - Poids : ${currCompo.weightKg} kg
 - Masse grasse : ${currCompo.fatMassKg} kg (${fatPct}%)
 - Masse musculaire : ${currCompo.muscleMassKg} kg
 - Eau : ${currCompo.waterPercent?.toFixed(0) ?? 'N/A'}%
 
-C'est la première semaine. Il n'y a aucune transformation à évaluer. Ta seule mission : estimer si ces mesures de DÉPART sont physiologiquement plausibles au regard du physique visible sur la photo S1.
+Ta mission : estimer si ces mesures sont physiologiquement plausibles au regard du physique visible.
 
 Évalue :
 1. Le % de masse grasse déclaré (${fatPct}%) correspond-il à la silhouette visible ?
 2. La masse musculaire déclarée (${currCompo.muscleMassKg} kg) est-elle cohérente avec les proportions visibles ?
-3. Y a-t-il des incohérences majeures entre l'apparence et les chiffres ?
 
 Ne pénalise PAS l'absence de transformation — aucune n'est attendue en semaine 1.
 
@@ -53,11 +82,11 @@ Réponds UNIQUEMENT en JSON strict, sans markdown :
 {"credibilityScore": <entier 0-100>, "analysis": "<2-3 phrases en français, directes et précises>"}
 
 Barème :
-85-100 : mesures initiales très plausibles, correspondance physique claire
+85-100 : mesures très plausibles, correspondance physique claire
 65-84 : mesures globalement crédibles, légères incertitudes
-45-64 : quelques incohérences dans les marges acceptables
-25-44 : incohérences notables entre physique et chiffres de base
-0-24 : mesures initiales peu crédibles au regard du physique visible`;
+45-64 : quelques incohérences dans des marges acceptables
+25-44 : incohérences notables entre physique et chiffres
+0-24 : mesures peu crédibles au regard du physique visible`;
   }
 
   // ── Semaine 2+ : évaluation de l'évolution ────────────────────────────────
