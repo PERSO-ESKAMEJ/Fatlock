@@ -82,12 +82,17 @@ export function calcStreak(logs: DailyLog[], intensity: Intensity, customRituals
 export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   let streak = 0;
+  let prevDate: string | null = null;
   for (const log of sorted) {
-    if (isDayValid(log, intensity, customRituals)) {
-      streak++;
-    } else {
-      break;
+    if (prevDate !== null) {
+      const prev = new Date(prevDate + 'T12:00:00');
+      prev.setDate(prev.getDate() - 1);
+      const expected = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+      if (log.date !== expected) break;
     }
+    if (!isDayValid(log, intensity, customRituals)) break;
+    streak++;
+    prevDate = log.date;
   }
   return streak;
 }

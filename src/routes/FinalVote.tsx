@@ -82,8 +82,15 @@ function TransformationCard({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getWeeklyPhoto(card.userId, 0), getWeeklyPhoto(card.userId, currentWeek)])
-      .then(([p0, p8]) => { if (!cancelled) { setS0(p0); setS8(p8); } });
+    async function load() {
+      const p0 = await getWeeklyPhoto(card.userId, 0);
+      let p8: WeeklyPhoto | null = null;
+      for (let w = currentWeek; w >= 1 && !p8; w--) {
+        p8 = await getWeeklyPhoto(card.userId, w);
+      }
+      if (!cancelled) { setS0(p0); setS8(p8); }
+    }
+    load();
     return () => { cancelled = true; };
   }, [card.userId, currentWeek]);
 
@@ -248,10 +255,11 @@ export default function FinalVote() {
 
     for (const card of pkg.cards) {
       try {
-        const [s0, s8] = await Promise.all([
-          getWeeklyPhoto(card.userId, 0),
-          getWeeklyPhoto(card.userId, durationWeeks),
-        ]);
+        const s0 = await getWeeklyPhoto(card.userId, 0);
+        let s8: WeeklyPhoto | null = null;
+        for (let w = durationWeeks; w >= 1 && !s8; w--) {
+          s8 = await getWeeklyPhoto(card.userId, w);
+        }
         if (s0 && s8) {
           const result = await runFinalAIAnalysis({ userId: card.userId, s0Photo: s0, s8Photo: s8, apiKey, durationWeeks });
           const avgCred = pkg.weeklyCredibilityAvgs[card.userId] ?? 50;

@@ -6,7 +6,7 @@ import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysis
 import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses } from '../../lib/scoring';
 import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
-import { generateRecapFile } from '../../lib/recap';
+import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
 import { getPhotosByWeek } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import Button from '../ui/Button';
@@ -162,7 +162,8 @@ export default function AdminSync() {
             0
           );
           weekRegularity = calcRegularityScore(cwLogs, 7);
-          weekTransformation = rScores[rScores.length - 1]?.transformationScore ?? 0;
+          const sortedRScores = [...rScores].sort((a, b) => a.weekNumber - b.weekNumber);
+          weekTransformation = sortedRScores[sortedRScores.length - 1]?.transformationScore ?? 0;
           composite = calcCompositeScore(cwEgo, weekTransformation, weekRegularity);
         }
 
@@ -230,15 +231,15 @@ export default function AdminSync() {
       const collectedAiResults: AIAnalysisResult[] = [];
 
       for (const recap of processedRecaps) {
-        const photos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek) ?? null;
+        const photos = await getPhotosByWeek(recap.profile.id, currentWeek);
         if (!photos) continue;
 
-        const rComps = recap.bodyCompositions;
+        const rComps = [...recap.bodyCompositions].sort((a, b) => a.weekNumber - b.weekNumber);
         const latestComp = rComps[rComps.length - 1];
         if (!latestComp) continue;
 
         const prevComp = rComps.length > 1 ? rComps[rComps.length - 2] : null;
-        const prevPhotos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek - 1) ?? undefined;
+        const prevPhotos = await getPhotosByWeek(recap.profile.id, currentWeek - 1) ?? undefined;
 
         setAiProgress(recap.profile.name);
         try {
@@ -321,6 +322,8 @@ export default function AdminSync() {
       try {
         const text = await f.text();
         const data = JSON.parse(text) as RecapFile;
+        const valid = await verifyRecapFile(data);
+        if (!valid) showToast(`⚠ ${f.name} : checksum invalide — fichier potentiellement modifié`, 'error');
         parsed.push(data);
       } catch {
         showToast(`Fichier invalide : ${f.name}`, 'error');

@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { getDailyCode, getTodayStr } from '../lib/dailyCode';
+import { clearAllPhotos, clearUserPhotos } from '../lib/db';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -48,7 +49,12 @@ export default function Settings() {
   const todayCode = getDailyCode(challenge.groupSecret, getTodayStr());
 
   function handleSaveProfile() {
-    updateProfile({ age: parseInt(age) });
+    const parsedAge = parseInt(age);
+    if (isNaN(parsedAge) || parsedAge < 10 || parsedAge > 100) {
+      showToast('Âge invalide', 'error');
+      return;
+    }
+    updateProfile({ age: parsedAge });
     showToast('Profil mis à jour', 'success');
   }
 
@@ -174,8 +180,10 @@ export default function Settings() {
 
     if (challengeStore) {
       const csTyped = challengeStore as Record<string, unknown>;
+      const rawDates = csTyped.codeConfirmedDates;
+      const codeConfirmedDates = Array.isArray(rawDates) ? {} : (rawDates ?? {});
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (useChallengeStore as any).setState({ codeConfirmedDates: csTyped.codeConfirmedDates ?? [] });
+      (useChallengeStore as any).setState({ codeConfirmedDates });
     }
 
     if (masterLeaderboard) {
@@ -194,6 +202,7 @@ export default function Settings() {
     resetLogs();
     resetChallenge();
     resetLeaderboard();
+    clearAllPhotos().catch(() => undefined);
     navigate('/');
   }
 
@@ -206,6 +215,9 @@ export default function Settings() {
       resetLogs();
       resetChallenge();
       resetLeaderboard();
+      clearAllPhotos().catch(() => undefined);
+    } else {
+      clearUserPhotos(userId).catch(() => undefined);
     }
     navigate('/');
   }
@@ -301,6 +313,9 @@ export default function Settings() {
               const base = window.location.origin + import.meta.env.BASE_URL;
               const dw = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
               let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}&cid=${challenge.id}&sd=${challenge.startDate}&dw=${dw}&stake=${challenge.stakeAmount}&aid=${challenge.adminId}`;
+              if (challenge.challengeType === 'custom' && challenge.customSettings) {
+                link += `&ct=custom&cs=${encodeURIComponent(JSON.stringify(challenge.customSettings))}`;
+              }
               if (challenge.supabaseUrl) link += `&sb_url=${encodeURIComponent(challenge.supabaseUrl)}`;
               if (challenge.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(challenge.supabaseAnonKey)}`;
               navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));

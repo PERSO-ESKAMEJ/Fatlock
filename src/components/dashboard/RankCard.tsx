@@ -33,8 +33,8 @@ export default function RankCard() {
   const streak = calcCurrentStreak(logs, profile.intensity, customRituals);
   const rank = entry?.currentRank ?? '—';
 
-  const adherencePct = logs.length > 0
-    ? Math.round((confirmedLogs.length / Math.max(1, logs.length)) * 100)
+  const adherencePct = challengeLogs.length > 0
+    ? Math.round((confirmedLogs.length / Math.max(1, challengeLogs.length)) * 100)
     : 0;
 
   const motivationM: Record<string, string> = {

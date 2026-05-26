@@ -55,14 +55,16 @@ export default function WeeklyCheckin() {
     }
     setSaving(true);
     try {
-      await savePhoto({
-        userId: profile.id,
-        weekNumber: targetWeek,
-        capturedAt: new Date().toISOString(),
-        frontBase64: frontB64,
-        sideBase64: sideB64,
-        backBase64: backB64 || undefined,
-      });
+      if (trackPhotos !== 'disabled' && (frontB64 || sideB64)) {
+        await savePhoto({
+          userId: profile.id,
+          weekNumber: targetWeek,
+          capturedAt: new Date().toISOString(),
+          frontBase64: frontB64,
+          sideBase64: sideB64,
+          backBase64: backB64 || undefined,
+        });
+      }
 
       addBodyComposition(savedComp);
 
@@ -82,6 +84,8 @@ export default function WeeklyCheckin() {
           ? challenge.customSettings?.rituals
           : undefined;
         const allUserLogs = dailyLogs.filter((l) => l.userId === profile.id);
+        const today = new Date();
+        const elapsedDays = Math.min(7, Math.max(1, Math.floor((today.getTime() - weekStartDate.getTime()) / 86400000) + 1));
         const score = buildWeeklyScore(
           profile.id,
           currentWeek,
@@ -90,7 +94,7 @@ export default function WeeklyCheckin() {
           startComp,
           savedComp,
           null,
-          7,
+          elapsedDays,
           customRituals,
           durationWeeks,
           allUserLogs

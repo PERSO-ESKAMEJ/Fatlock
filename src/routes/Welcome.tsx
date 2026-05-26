@@ -39,7 +39,7 @@ const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 type TrainingDays = UserProfile['trainingDays'];
 
 export default function Welcome() {
-  const { profile, addEntry } = useProfileStore();
+  const { profile, entries, addEntry } = useProfileStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdding = searchParams.get('add') === '1';
@@ -52,24 +52,31 @@ export default function Welcome() {
   const sbUrlParam = decodeURIComponent(searchParams.get('sb_url') ?? '');
   const sbKeyParam = decodeURIComponent(searchParams.get('sb_key') ?? '');
   const dwParam = searchParams.get('dw') ?? '';
+  const ctParam = searchParams.get('ct') ?? '';
+  const csParam = searchParams.get('cs') ?? '';
   const hasJoinLink = joinParam.length === 6;
 
   const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
   const [profileStep, setProfileStep] = useState(1);
   const PROFILE_STEPS = 6;
   const [mode, setMode] = useState<'create' | 'join'>(hasJoinLink ? 'join' : 'create');
-  const [challengeType, setChallengeType] = useState<ChallengeType>('fatlock');
-  const [customSettings, setCustomSettings] = useState<CustomChallengeSettings>({
-    description: '',
-    durationWeeks: 8,
-    trackWeight: true,
-    weightDirection: 'down',
-    trackBodyFat: true,
-    trackPhotos: 'required',
-    nutritionEnabled: true,
-    caloricDirection: 'deficit',
-    rituals: FATLOCK_DEFAULT_CUSTOM_RITUALS.map((r) => ({ ...r })),
-    aiAnalysisEnabled: true,
+  const [challengeType, setChallengeType] = useState<ChallengeType>(ctParam === 'custom' ? 'custom' : 'fatlock');
+  const [customSettings, setCustomSettings] = useState<CustomChallengeSettings>(() => {
+    if (csParam) {
+      try { return JSON.parse(decodeURIComponent(csParam)) as CustomChallengeSettings; } catch { /* fall through */ }
+    }
+    return {
+      description: '',
+      durationWeeks: 8,
+      trackWeight: true,
+      weightDirection: 'down',
+      trackBodyFat: true,
+      trackPhotos: 'required',
+      nutritionEnabled: true,
+      caloricDirection: 'deficit',
+      rituals: FATLOCK_DEFAULT_CUSTOM_RITUALS.map((r) => ({ ...r })),
+      aiAnalysisEnabled: true,
+    };
   });
 
   // Profile fields
@@ -86,6 +93,7 @@ export default function Welcome() {
   });
 
   const [hintOpen, setHintOpen] = useState(true);
+  const [joinError, setJoinError] = useState('');
 
   // Challenge fields
   const [durationWeeks, setDurationWeeks] = useState(dwParam ? parseInt(dwParam) : 8);
@@ -133,6 +141,15 @@ export default function Welcome() {
 
   function handleCreateChallenge() {
     if (!name || !age || !height || !weight) return;
+
+    if (mode === 'join') {
+      const upperCode = joinCode.toUpperCase().trim();
+      if (entries.some((e) => e.challenge.groupCode === upperCode)) {
+        setJoinError('Tu es déjà inscrit dans ce groupe sur cet appareil.');
+        return;
+      }
+    }
+    setJoinError('');
 
     const profileId = crypto.randomUUID();
     const newProfile: UserProfile = {
@@ -909,6 +926,9 @@ export default function Welcome() {
             Les tricheurs n'ont qu'à bien se tenir.
           </div>
 
+          {joinError && (
+            <p className="text-xs text-center font-bold" style={{ color: 'var(--red)' }}>{joinError}</p>
+          )}
           <Button
             className="w-full"
             size="lg"

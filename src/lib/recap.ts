@@ -25,6 +25,7 @@ export async function generateRecapFile(
   weeklyScores: WeeklyScore[]
 ): Promise<RecapFile> {
   const payload = {
+    version: '1.0' as const,
     userId: profile.id,
     userName: profile.name,
     challengeId,
@@ -40,11 +41,7 @@ export async function generateRecapFile(
   const checksumInput = JSON.stringify(payload);
   const checksum = await sha256(checksumInput);
 
-  return {
-    version: '1.0',
-    ...payload,
-    checksum,
-  };
+  return { ...payload, checksum };
 }
 
 export function exportRecapAsFile(recap: RecapFile): void {
