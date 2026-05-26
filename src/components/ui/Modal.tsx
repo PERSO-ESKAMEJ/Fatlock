@@ -11,8 +11,15 @@ interface ModalProps {
 export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    if (open) document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    if (open) {
+      document.addEventListener('keydown', handler);
+      document.body.style.overflow = 'hidden';
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
+    return () => {
+      document.removeEventListener('keydown', handler);
+      document.body.style.overflow = '';
+    };
   }, [open, onClose]);
 
   if (!open) return null;

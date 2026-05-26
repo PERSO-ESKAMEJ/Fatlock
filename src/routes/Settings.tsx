@@ -370,23 +370,23 @@ export default function Settings() {
           Zone Danger
         </div>
         <p className="text-xs text-[var(--muted)] mb-3">
-          Quitte le groupe actif et supprime ses données locales. Si c'est ton seul groupe, toutes les données sont effacées.
+          Supprime toutes les données de ce groupe sur cet appareil. Irréversible.
         </p>
         <Button variant="danger" className="w-full" onClick={() => setShowReset(true)}>
-          Quitter ce groupe
+          Supprimer ce groupe
         </Button>
       </div>
 
-      <Modal open={showReset} onClose={() => setShowReset(false)} title="Quitter ce groupe ?">
+      <Modal open={showReset} onClose={() => setShowReset(false)} title="Supprimer ce groupe ?">
         <p className="text-sm text-[var(--muted)] mb-1">
           Groupe : <span className="font-bold text-[var(--ink)]">{challenge.groupName}</span>
         </p>
         <p className="text-sm text-[var(--muted)] mb-4">
-          Tes données pour ce groupe seront supprimées de cet appareil. Cette action est définitive.
+          Toutes tes données locales pour ce groupe seront effacées définitivement — logs, pesées, photos, scores.
         </p>
         <div className="flex gap-3">
           <Button variant="ghost" className="flex-1" onClick={() => setShowReset(false)}>Annuler</Button>
-          <Button variant="danger" className="flex-1" onClick={handleReset}>Confirmer</Button>
+          <Button variant="danger" className="flex-1" onClick={handleReset}>Supprimer définitivement</Button>
         </div>
       </Modal>
 
