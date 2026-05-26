@@ -85,7 +85,7 @@ export default function Welcome() {
     thursday: null, friday: 'muscu_j3', saturday: 'cardio', sunday: 'repos',
   });
 
-  const [hintOpen, setHintOpen] = useState(false);
+  const [hintOpen, setHintOpen] = useState(true);
 
   // Challenge fields
   const [durationWeeks, setDurationWeeks] = useState(dwParam ? parseInt(dwParam) : 8);
