@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useChallengeStore, getChallengeState } from '../store/useChallengeStore';
@@ -67,6 +67,12 @@ export default function Rituals() {
   const ritualState: Record<string, boolean> = existingLog?.rituals ?? {};
   const [weight, setWeight] = useState(existingLog?.weightKg?.toString() ?? '');
   const [customMetric, setCustomMetric] = useState(existingLog?.customMetricValue?.toString() ?? '');
+
+  useEffect(() => {
+    const log = getDailyLog(profile.id, activeDate);
+    setWeight(log?.weightKg?.toString() ?? '');
+    setCustomMetric(log?.customMetricValue?.toString() ?? '');
+  }, [activeDate]);
 
   const earnedPts = existingLog ? calcDayRitualPoints(existingLog, profile.intensity, customRituals ?? undefined) : 0;
   const maxPts = isCustom && customRituals

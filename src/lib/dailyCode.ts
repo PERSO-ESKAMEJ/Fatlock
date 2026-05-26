@@ -19,11 +19,18 @@ export function getDailyCode(groupSecret: string, dateStr: string): string {
   return `${word}-${num.toString().padStart(2, '0')}`;
 }
 
+function getLocalDateStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function isTodaysCode(groupSecret: string, inputCode: string): boolean {
-  const today = new Date().toISOString().slice(0, 10);
-  return getDailyCode(groupSecret, today).toUpperCase() === inputCode.toUpperCase();
+  return getDailyCode(groupSecret, getLocalDateStr()).toUpperCase() === inputCode.toUpperCase();
 }
 
 export function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getLocalDateStr();
 }

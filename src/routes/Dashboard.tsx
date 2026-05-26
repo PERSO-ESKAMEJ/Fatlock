@@ -115,7 +115,7 @@ export default function Dashboard() {
         <div
           className="mb-4 p-5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,77,94,0.08))', border: '1px solid rgba(255,215,0,0.4)' }}
-          onClick={() => navigate('/final-vote')}
+          onClick={() => navigate('/vote-final')}
         >
           <div>
             <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'rgb(255,215,0)' }}>

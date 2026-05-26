@@ -92,8 +92,12 @@ export default function Welcome() {
   const [stake, setStake] = useState(stakeParam || '20');
   const [startDate, setStartDate] = useState(() => {
     if (sdParam) return sdParam;
-    const d = new Date(); d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   });
   const [joinCode, setJoinCode] = useState(joinParam);
   const [groupName, setGroupName] = useState(gnameParam);
@@ -817,7 +821,7 @@ export default function Welcome() {
                 <input
                   type="date"
                   value={startDate}
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })()}
                   onChange={(e) => setStartDate(e.target.value)}
                   style={{ colorScheme: 'dark' }}
                 />
