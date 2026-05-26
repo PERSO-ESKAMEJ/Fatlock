@@ -95,7 +95,14 @@ export default function AdminSync() {
   async function handleAggregate(recapsToProcess: RecapFile[]) {
     setLoading(true);
     try {
-      let effectiveRecaps = [...recapsToProcess];
+      // Récupère les exclus depuis Supabase et filtre leurs récaps
+      let excludedIds = new Set<string>();
+      if (sb) {
+        const { data } = await sb.from('excluded_members').select('user_id').eq('challenge_id', challenge.id);
+        excludedIds = new Set((data ?? []).map((r: { user_id: string }) => r.user_id));
+      }
+
+      let effectiveRecaps = recapsToProcess.filter((r) => !excludedIds.has(r.userId));
 
       // Auto-inclure les données locales de l'admin s'il n'a pas poussé de récap
       if (!effectiveRecaps.some((r) => r.userId === profile.id)) {

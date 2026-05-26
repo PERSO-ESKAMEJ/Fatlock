@@ -45,6 +45,7 @@ export default function Settings() {
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<Record<string, unknown> | null>(null);
   const [members, setMembers] = useState<{ user_id: string; user_name: string; joined_at: string }[]>([]);
+  const [excludedMembers, setExcludedMembers] = useState<{ user_id: string; user_name: string }[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   useEffect(() => {
@@ -57,13 +58,33 @@ export default function Settings() {
     const sb = supabase();
     if (!sb) return;
     setLoadingMembers(true);
-    const { data } = await sb
-      .from('group_members')
-      .select('user_id, user_name, joined_at')
-      .eq('challenge_id', challenge!.id)
-      .order('joined_at');
-    setMembers(data ?? []);
+    const [{ data: mData }, { data: eData }] = await Promise.all([
+      sb.from('group_members').select('user_id, user_name, joined_at').eq('challenge_id', challenge!.id).order('joined_at'),
+      sb.from('excluded_members').select('user_id, user_name').eq('challenge_id', challenge!.id),
+    ]);
+    setMembers(mData ?? []);
+    setExcludedMembers(eData ?? []);
     setLoadingMembers(false);
+  }
+
+  async function handleRemoveMember(userId: string, userName: string) {
+    const sb = supabase();
+    if (!sb) return;
+    await Promise.all([
+      sb.from('group_members').delete().eq('challenge_id', challenge!.id).eq('user_id', userId),
+      sb.from('excluded_members').upsert({ challenge_id: challenge!.id, user_id: userId, user_name: userName }, { onConflict: 'challenge_id,user_id' }),
+    ]);
+    setMembers((prev: { user_id: string; user_name: string; joined_at: string }[]) => prev.filter((x) => x.user_id !== userId));
+    setExcludedMembers((prev: { user_id: string; user_name: string }[]) => [...prev.filter((x) => x.user_id !== userId), { user_id: userId, user_name: userName }]);
+    showToast(`${userName} exclu du challenge`, 'success');
+  }
+
+  async function handleReinstateMember(userId: string, userName: string) {
+    const sb = supabase();
+    if (!sb) return;
+    await sb.from('excluded_members').delete().eq('challenge_id', challenge!.id).eq('user_id', userId);
+    setExcludedMembers((prev: { user_id: string; user_name: string }[]) => prev.filter((x) => x.user_id !== userId));
+    showToast(`${userName} réintégré`, 'success');
   }
 
   const todayCode = getDailyCode(challenge.groupSecret, getTodayStr());
@@ -373,32 +394,47 @@ export default function Settings() {
           ) : members.length === 0 ? (
             <p className="text-xs text-[var(--muted2)]">{loadingMembers ? 'Chargement…' : 'Aucun membre inscrit pour l\'instant.'}</p>
           ) : (
-            <div className="space-y-2">
-              {members.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-[var(--ink)] truncate">{m.user_name}</div>
-                    <div className="text-xs text-[var(--muted)]">
-                      {new Date(m.joined_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            <>
+              <div className="space-y-2">
+                {members.map((m: { user_id: string; user_name: string; joined_at: string }) => (
+                  <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-[var(--ink)] truncate">{m.user_name}</div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {new Date(m.joined_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
+                    <button
+                      onClick={() => handleRemoveMember(m.user_id, m.user_name)}
+                      className="text-xs px-2 py-1 rounded flex-shrink-0 transition-all hover:opacity-80"
+                      style={{ background: 'rgba(255,77,94,0.1)', color: 'var(--red)', border: '1px solid rgba(255,77,94,0.3)' }}
+                    >
+                      Exclure
+                    </button>
                   </div>
-                  <button
-                    onClick={async () => {
-                      const sb = supabase();
-                      if (!sb) return;
-                      await sb.from('group_members').delete().eq('challenge_id', challenge.id).eq('user_id', m.user_id);
-                      setMembers((prev: { user_id: string; user_name: string; joined_at: string }[]) => prev.filter((x) => x.user_id !== m.user_id));
-                      showToast(`${m.user_name} retiré`, 'success');
-                    }}
-                    className="text-xs px-2 py-1 rounded flex-shrink-0 transition-all hover:opacity-80"
-                    style={{ background: 'rgba(255,77,94,0.1)', color: 'var(--red)', border: '1px solid rgba(255,77,94,0.3)' }}
-                  >
-                    Retirer
-                  </button>
+                ))}
+                <p className="text-xs text-[var(--muted2)] pt-1">{members.length} participant{members.length > 1 ? 's' : ''} · Toi non inclus</p>
+              </div>
+              {excludedMembers.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                  <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--red)' }}>Exclus du challenge</div>
+                  <div className="space-y-2">
+                    {excludedMembers.map((m: { user_id: string; user_name: string }) => (
+                      <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg gap-2" style={{ opacity: 0.6 }}>
+                        <span className="text-sm text-[var(--muted)] truncate">{m.user_name}</span>
+                        <button
+                          onClick={() => handleReinstateMember(m.user_id, m.user_name)}
+                          className="text-xs px-2 py-1 rounded flex-shrink-0 transition-all hover:opacity-80"
+                          style={{ background: 'rgba(47,227,154,0.1)', color: 'var(--green)', border: '1px solid rgba(47,227,154,0.3)' }}
+                        >
+                          Réintégrer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-              <p className="text-xs text-[var(--muted2)] pt-1">{members.length} participant{members.length > 1 ? 's' : ''} · Toi non inclus</p>
-            </div>
+              )}
+            </>
           )}
         </div>
       )}

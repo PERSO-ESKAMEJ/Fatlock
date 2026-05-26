@@ -172,7 +172,26 @@ CREATE POLICY "gm_update" ON group_members
 
 
 -- ────────────────────────────────────────────────────────────
--- 5. Index utiles pour les performances
+-- 5. Table "excluded_members"
+-- ────────────────────────────────────────────────────────────
+-- Participants exclus par l'admin. Filtrés lors de l'agrégation du classement.
+
+CREATE TABLE IF NOT EXISTS excluded_members (
+  challenge_id  TEXT NOT NULL,
+  user_id       TEXT NOT NULL,
+  user_name     TEXT NOT NULL,
+  PRIMARY KEY (challenge_id, user_id)
+);
+
+ALTER TABLE excluded_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "em_select" ON excluded_members FOR SELECT TO anon USING (true);
+CREATE POLICY "em_insert" ON excluded_members FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "em_delete" ON excluded_members FOR DELETE TO anon USING (true);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 6. Index utiles pour les performances
 -- ────────────────────────────────────────────────────────────
 
 -- Accélère la lecture des récaps par groupe (requête principale de l'admin)
