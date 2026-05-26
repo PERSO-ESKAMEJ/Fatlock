@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
-import { RecapFile, MasterLeaderboard, LeaderboardEntry } from '../../types';
+import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto } from '../../types';
 import { calcCurrentStreak, getTier, calcCompositeScore } from '../../lib/scoring';
 import { getCurrentWeek } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
+import { generateRecapFile } from '../../lib/recap';
+import { getPhotosByWeek } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
@@ -19,16 +21,21 @@ interface RecapStatus {
 
 export default function AdminSync() {
   const challenge = useProfileStore((s) => s.challenge)!;
-  const addAIResult = useLogStore((s) => s.addAIResult);
+  const profile = useProfileStore((s) => s.profile)!;
+  const { addAIResult, dailyLogs, bodyCompositions, weeklyScores } = useLogStore();
   const setMasterLeaderboard = useLeaderboardStore((s) => s.setMasterLeaderboard);
   const masterLeaderboard = useLeaderboardStore((s) => s.masterLeaderboard);
   const { showToast } = useToast();
 
   const [recaps, setRecaps] = useState<RecapFile[]>([]);
+  const [processedRecaps, setProcessedRecaps] = useState<RecapFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiProgress, setAiProgress] = useState('');
   const [statusLoading, setStatusLoading] = useState(false);
   const [participantStatus, setParticipantStatus] = useState<RecapStatus[]>([]);
   const [showReveal, setShowReveal] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentWeek = getCurrentWeek(challenge.startDate);
@@ -53,7 +60,7 @@ export default function AdminSync() {
         }))
       );
     } catch {
-      // silencieux — pas de toast pour le refresh auto
+      // silencieux
     } finally {
       setStatusLoading(false);
     }
@@ -64,76 +71,42 @@ export default function AdminSync() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeek]);
 
-  async function handleFetchRecapsFromSupabase() {
-    if (!sb) { showToast('Supabase non configuré', 'error'); return; }
-    setLoading(true);
-    try {
-      const { data, error } = await sb
-        .from('recaps')
-        .select('data')
-        .eq('challenge_id', challenge.id)
-        .eq('week_number', currentWeek);
-      if (error || !data?.length) { showToast('Aucun récap disponible sur Supabase', 'error'); return; }
-      const parsed: RecapFile[] = data.map((row: { data: RecapFile }) => row.data);
-      setRecaps(parsed);
-      showToast(`${parsed.length} récap(s) chargé(s) depuis Supabase`, 'success');
-    } catch {
-      showToast('Erreur Supabase', 'error');
-    } finally {
-      setLoading(false);
+  async function buildAdminRecap(): Promise<RecapFile> {
+    const adminPhotos: WeeklyPhoto[] = [];
+    for (let w = 0; w <= currentWeek; w++) {
+      const p = await getPhotosByWeek(profile.id, w);
+      if (p) adminPhotos.push(p);
     }
+    return generateRecapFile(
+      profile,
+      challenge.id,
+      currentWeek,
+      dailyLogs.filter((l) => l.userId === profile.id),
+      bodyCompositions.filter((c) => c.userId === profile.id),
+      adminPhotos,
+      weeklyScores.filter((s) => s.userId === profile.id),
+    );
   }
 
-  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    const parsed: RecapFile[] = [];
-    for (const f of files) {
-      try {
-        const text = await f.text();
-        const data = JSON.parse(text) as RecapFile;
-        parsed.push(data);
-      } catch {
-        showToast(`Fichier invalide : ${f.name}`, 'error');
+  // ── Étape 1 : Agrégation des scores (sans IA) ──────────────────────────────
+  async function handleAggregate(recapsToProcess: RecapFile[]) {
+    setLoading(true);
+    try {
+      let effectiveRecaps = [...recapsToProcess];
+
+      // Auto-inclure les données locales de l'admin s'il n'a pas poussé de récap
+      if (!effectiveRecaps.some((r) => r.userId === profile.id)) {
+        const adminRecap = await buildAdminRecap();
+        effectiveRecaps = [adminRecap, ...effectiveRecaps];
       }
-    }
-    setRecaps(parsed);
-    showToast(`${parsed.length} récap(s) chargé(s)`, 'success');
-  }
 
-  async function handleAggregate() {
-    if (!recaps.length) return;
-    setLoading(true);
-    try {
       const entries: LeaderboardEntry[] = [];
 
-      for (const recap of recaps) {
-        const { profile: rProfile, dailyLogs, weeklyScores, bodyCompositions } = recap;
+      for (const recap of effectiveRecaps) {
+        const { profile: rProfile, dailyLogs: rLogs, weeklyScores: rScores } = recap;
 
-        let credScore: number | undefined;
-        if (challenge.anthropicApiKey) {
-          try {
-            const photos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek) ?? null;
-            if (photos) {
-              const latestComp = bodyCompositions[bodyCompositions.length - 1];
-              const prevComp = bodyCompositions.length > 1 ? bodyCompositions[bodyCompositions.length - 2] : null;
-              const result = await runAIAnalysis({
-                userId: rProfile.id,
-                weekNumber: currentWeek,
-                prevCompo: prevComp,
-                currCompo: latestComp,
-                photo: photos,
-                apiKey: challenge.anthropicApiKey,
-              });
-              addAIResult(result);
-              credScore = result.credibilityScore;
-            }
-          } catch (err) {
-            console.warn('AI analysis skipped for', rProfile.name, err);
-          }
-        }
-
-        const totalEgo = weeklyScores.reduce((sum, s) => sum + s.egoPoints + s.streakBonus + s.aiBonus, 0);
-        const latestScore = weeklyScores[weeklyScores.length - 1];
+        const totalEgo = rScores.reduce((sum, s) => sum + s.egoPoints + s.streakBonus + s.aiBonus, 0);
+        const latestScore = rScores[rScores.length - 1];
         const composite = latestScore
           ? calcCompositeScore(
               latestScore.egoPoints + latestScore.streakBonus + latestScore.aiBonus,
@@ -154,8 +127,8 @@ export default function AdminSync() {
           regularityPercent: latestScore?.regularityScore ?? 0,
           transformationPercent: latestScore?.transformationScore ?? 0,
           compositeScore: composite,
-          currentStreak: calcCurrentStreak(dailyLogs, rProfile.intensity),
-          weeklyCredibilityScore: credScore,
+          currentStreak: calcCurrentStreak(rLogs, rProfile.intensity),
+          weeklyCredibilityScore: undefined,
         });
       }
 
@@ -164,7 +137,6 @@ export default function AdminSync() {
 
       const biggestMover = [...entries].sort((a, b) => (b.previousRank - b.currentRank) - (a.previousRank - a.currentRank))[0];
       const topStreak = [...entries].sort((a, b) => b.currentStreak - a.currentStreak)[0];
-      const topCred = [...entries].sort((a, b) => (b.weeklyCredibilityScore ?? 0) - (a.weeklyCredibilityScore ?? 0))[0];
 
       const lb: MasterLeaderboard = {
         challengeId: challenge.id,
@@ -174,19 +146,12 @@ export default function AdminSync() {
         weeklyHighlights: {
           biggestMover: biggestMover?.userId ?? '',
           topStreak: topStreak?.userId ?? '',
-          topCredibility: topCred?.userId ?? '',
+          topCredibility: '',
         },
       };
 
       setMasterLeaderboard(lb);
-
-      const blob = new Blob([JSON.stringify(lb)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `fatlock-master-S${currentWeek}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      setProcessedRecaps(effectiveRecaps);
 
       if (sb) {
         await sb.from('master_leaderboards').upsert(
@@ -195,7 +160,7 @@ export default function AdminSync() {
         );
       }
 
-      showToast('Classement généré et exporté !', 'success');
+      showToast(`Classement généré — ${entries.length} participant(s)`, 'success');
     } catch (err) {
       showToast('Erreur lors de la génération', 'error');
       console.error(err);
@@ -204,16 +169,127 @@ export default function AdminSync() {
     }
   }
 
+  // ── Étape 2 : Analyse IA (optionnelle, sur classement déjà généré) ─────────
+  async function handleRunAI() {
+    if (!masterLeaderboard || !challenge.anthropicApiKey) return;
+    setAiLoading(true);
+    setAiProgress('');
+    try {
+      const updatedEntries = masterLeaderboard.entries.map((e) => ({ ...e }));
+
+      for (const recap of processedRecaps) {
+        const photos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek) ?? null;
+        if (!photos) continue;
+
+        const rComps = recap.bodyCompositions;
+        const latestComp = rComps[rComps.length - 1];
+        if (!latestComp) continue;
+
+        const prevComp = rComps.length > 1 ? rComps[rComps.length - 2] : null;
+
+        setAiProgress(recap.profile.name);
+        try {
+          const result = await runAIAnalysis({
+            userId: recap.profile.id,
+            weekNumber: currentWeek,
+            prevCompo: prevComp,
+            currCompo: latestComp,
+            photo: photos,
+            apiKey: challenge.anthropicApiKey,
+          });
+          addAIResult(result);
+          const entry = updatedEntries.find((e) => e.userId === recap.profile.id);
+          if (entry) entry.weeklyCredibilityScore = result.credibilityScore;
+        } catch (err) {
+          console.warn('AI skipped for', recap.profile.name, err);
+        }
+      }
+
+      const topCred = [...updatedEntries].sort(
+        (a, b) => (b.weeklyCredibilityScore ?? 0) - (a.weeklyCredibilityScore ?? 0)
+      )[0];
+
+      const updatedLb: MasterLeaderboard = {
+        ...masterLeaderboard,
+        updatedAt: new Date().toISOString(),
+        entries: updatedEntries,
+        weeklyHighlights: {
+          ...masterLeaderboard.weeklyHighlights,
+          topCredibility: topCred?.userId ?? '',
+        },
+      };
+
+      setMasterLeaderboard(updatedLb);
+
+      if (sb) {
+        await sb.from('master_leaderboards').upsert(
+          { challenge_id: challenge.id, updated_at: updatedLb.updatedAt, data: updatedLb },
+          { onConflict: 'challenge_id' }
+        );
+      }
+
+      showToast('Analyses IA terminées !', 'success');
+    } catch (err) {
+      showToast('Erreur analyse IA', 'error');
+      console.error(err);
+    } finally {
+      setAiLoading(false);
+      setAiProgress('');
+    }
+  }
+
+  async function handleFetchAndAggregate() {
+    if (!sb) { showToast('Supabase non configuré', 'error'); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await sb
+        .from('recaps')
+        .select('data')
+        .eq('challenge_id', challenge.id)
+        .eq('week_number', currentWeek);
+      if (error) { showToast('Erreur Supabase', 'error'); return; }
+      const parsed: RecapFile[] = (data ?? []).map((row: { data: RecapFile }) => row.data);
+      setRecaps(parsed);
+      await handleAggregate(parsed);
+    } catch {
+      showToast('Erreur Supabase', 'error');
+      setLoading(false);
+    }
+  }
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const parsed: RecapFile[] = [];
+    for (const f of files) {
+      try {
+        const text = await f.text();
+        const data = JSON.parse(text) as RecapFile;
+        parsed.push(data);
+      } catch {
+        showToast(`Fichier invalide : ${f.name}`, 'error');
+      }
+    }
+    setRecaps(parsed);
+    showToast(`${parsed.length} récap(s) chargé(s)`, 'success');
+  }
+
+  const othersCount = participantStatus.filter((p) => p.userId !== profile.id).length;
+  const totalCount = othersCount + 1;
+  const canRunAI = !!challenge.anthropicApiKey && processedRecaps.length > 0 && !!masterLeaderboard;
+  const participantsWithPhotos = processedRecaps.filter(
+    (r) => r.weeklyPhotos?.some((p) => p.weekNumber === currentWeek)
+  ).length;
+
   return (
     <div className="space-y-4">
 
-      {/* Statut des récaps — visible uniquement si Supabase configuré */}
-      {sb && (
-        <div className="panel2 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
-              Récaps S{currentWeek} reçus
-            </div>
+      {/* ── Étape 1 : Classement ── */}
+      <div className="panel2 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+            Étape 1 — Récaps S{currentWeek}
+          </div>
+          {sb && (
             <button
               onClick={fetchStatus}
               disabled={statusLoading}
@@ -221,15 +297,28 @@ export default function AdminSync() {
             >
               {statusLoading ? '...' : '↻ Rafraîchir'}
             </button>
-          </div>
+          )}
+        </div>
 
-          {participantStatus.length === 0 ? (
-            <p className="text-xs text-[var(--muted2)]">
-              Aucun récap reçu pour cette semaine. Les participants doivent cliquer sur "Générer mon récap".
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {participantStatus.map((p) => (
+        {/* Admin */}
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--blue-bright)' }}>★</span>
+            <span className="text-sm font-bold text-[var(--ink)]">{profile.name} (toi)</span>
+          </div>
+          <span className="text-xs text-[var(--muted)]">données locales</span>
+        </div>
+
+        {/* Autres participants */}
+        {participantStatus.filter((p) => p.userId !== profile.id).length === 0 ? (
+          <p className="text-xs text-[var(--muted2)] mt-2">
+            {sb ? 'En attente des récaps des participants.' : 'Configure Supabase ou utilise le chargement manuel.'}
+          </p>
+        ) : (
+          <div className="space-y-1 mt-1">
+            {participantStatus
+              .filter((p) => p.userId !== profile.id)
+              .map((p) => (
                 <div key={p.userId} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: 'var(--green)' }}>✓</span>
@@ -240,76 +329,96 @@ export default function AdminSync() {
                   </span>
                 </div>
               ))}
-            </div>
-          )}
-
-          {participantStatus.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-[var(--border)]">
-              <Button
-                className="w-full"
-                onClick={handleFetchRecapsFromSupabase}
-                disabled={loading}
-                loading={loading}
-              >
-                Charger les {participantStatus.length} récap(s) et analyser →
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Chargement manuel (fallback sans Supabase) */}
-      <div className="panel2 p-4">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">
-          {sb ? 'Chargement manuel (fallback)' : 'Admin — Sync hebdomadaire'}
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label>Charger les récaps (.json)</label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".json"
-              multiple
-              onChange={handleFiles}
-              className="mt-1"
-            />
           </div>
+        )}
 
-          {recaps.length > 0 && (
-            <div className="text-sm" style={{ color: 'var(--green)' }}>
-              {recaps.length} participant(s) prêt(s) : {recaps.map((r) => r.userName).join(', ')}
+        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+          {sb ? (
+            <Button className="w-full" onClick={handleFetchAndAggregate} disabled={loading} loading={loading}>
+              Générer le classement — {totalCount} participant(s)
+            </Button>
+          ) : (
+            <p className="text-xs text-[var(--muted2)]">
+              Configure Supabase ou utilise le chargement manuel ci-dessous.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Étape 2 : Analyse IA ── */}
+      {canRunAI && (
+        <div className="panel2 p-4">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">
+            Étape 2 — Analyse IA (optionnelle)
+          </div>
+          <p className="text-xs text-[var(--muted2)] mb-3">
+            {participantsWithPhotos > 0
+              ? `${participantsWithPhotos} participant(s) ont des photos pour cette semaine.`
+              : 'Aucun participant n\'a de photos pour cette semaine.'}
+            {' '}L'IA évalue la cohérence entre les mesures déclarées et la transformation visible.
+          </p>
+
+          {aiLoading && aiProgress && (
+            <div className="text-xs text-[var(--blue-bright)] mb-2 animate-pulse">
+              Analyse en cours : {aiProgress}…
             </div>
           )}
 
           <Button
-            onClick={handleAggregate}
-            disabled={!recaps.length}
-            loading={loading}
             className="w-full"
+            onClick={handleRunAI}
+            disabled={aiLoading || participantsWithPhotos === 0}
+            loading={aiLoading}
           >
-            Agréger et analyser
+            Lancer l'analyse IA
           </Button>
         </div>
+      )}
+
+      {/* ── Chargement manuel (collapsible) ── */}
+      <div className="panel2 p-4">
+        <button
+          onClick={() => setShowManual((v) => !v)}
+          className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-widest text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+        >
+          <span>Chargement manuel (sans Supabase)</span>
+          <span>{showManual ? '▲' : '▼'}</span>
+        </button>
+
+        {showManual && (
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="text-xs text-[var(--muted)]">Récaps des participants (.json)</label>
+              <input ref={fileRef} type="file" accept=".json" multiple onChange={handleFiles} className="mt-1" />
+            </div>
+
+            {recaps.length > 0 && (
+              <div className="text-sm" style={{ color: 'var(--green)' }}>
+                {recaps.length} fichier(s) : {recaps.map((r) => r.userName).join(', ')}
+              </div>
+            )}
+
+            <Button
+              onClick={() => handleAggregate(recaps)}
+              disabled={!recaps.length || loading}
+              loading={loading}
+              className="w-full"
+            >
+              Agréger
+            </Button>
+          </div>
+        )}
       </div>
 
+      {/* ── Révéler ── */}
       {masterLeaderboard && (
-        <Button
-          variant="danger"
-          className="w-full"
-          size="lg"
-          onClick={() => setShowReveal(true)}
-        >
+        <Button variant="danger" className="w-full" size="lg" onClick={() => setShowReveal(true)}>
           🔥 RÉVÉLER LE CLASSEMENT
         </Button>
       )}
 
       {showReveal && masterLeaderboard && (
-        <DramaReveal
-          leaderboard={masterLeaderboard}
-          onClose={() => setShowReveal(false)}
-        />
+        <DramaReveal leaderboard={masterLeaderboard} onClose={() => setShowReveal(false)} />
       )}
     </div>
   );

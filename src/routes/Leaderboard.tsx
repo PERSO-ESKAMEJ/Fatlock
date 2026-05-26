@@ -187,22 +187,24 @@ export default function Leaderboard() {
       {/* Sync tab */}
       {tab === 'sync' && (
         <div className="space-y-4">
-          {/* Export recap */}
-          <div className="panel p-4">
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">
-              Mon récap
+          {/* Export recap — visible pour les participants uniquement */}
+          {!profile.isAdmin && (
+            <div className="panel p-4">
+              <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">
+                Mon récap
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">
+                Envoie ton récap hebdomadaire à l'admin pour qu'il génère le classement.
+              </p>
+              <Button
+                className="w-full"
+                onClick={handleExportRecap}
+                loading={exportLoading}
+              >
+                Envoyer mon récap S{currentWeek}
+              </Button>
             </div>
-            <p className="text-sm text-[var(--muted)] mb-3">
-              Génère ton fichier récap hebdomadaire et envoie-le à l'admin du groupe.
-            </p>
-            <Button
-              className="w-full"
-              onClick={handleExportRecap}
-              loading={exportLoading}
-            >
-              Générer mon récap S{currentWeek}
-            </Button>
-          </div>
+          )}
 
           {/* Admin sync */}
           {profile.isAdmin && <AdminSync />}
@@ -210,7 +212,7 @@ export default function Leaderboard() {
           {!profile.isAdmin && (
             <div className="panel2 p-4 text-sm text-[var(--muted)]">
               <div className="font-bold text-[var(--ink)] mb-1">Tu n'es pas admin</div>
-              Seul l'admin du groupe peut charger les récaps et générer le classement officiel.
+              Seul l'admin du groupe peut générer le classement officiel.
             </div>
           )}
         </div>
