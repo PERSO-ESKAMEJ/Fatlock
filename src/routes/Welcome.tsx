@@ -120,7 +120,7 @@ export default function Welcome() {
   }
 
   function addRitual() {
-    if (customSettings.rituals.length >= 10) return;
+    if (customSettings.rituals.length >= 15) return;
     setCustomSettings((s) => ({
       ...s,
       rituals: [...s.rituals, { id: `custom_${Date.now()}`, label: '', points: 1 as const, required: false }],
@@ -666,7 +666,7 @@ export default function Welcome() {
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Rituels quotidiens</div>
             <p className="text-xs text-[var(--muted2)] mb-3">
-              <span style={{ color: 'var(--gold)' }}>★</span> = requis · pts : intensité du rituel (1–3) · max 10 rituels
+              <span style={{ color: 'var(--gold)' }}>★</span> = requis · pts : intensité du rituel (1–3) · max 15 rituels
             </p>
             <div className="space-y-2">
               {customSettings.rituals.map((r, i) => (
@@ -695,7 +695,7 @@ export default function Welcome() {
                 </div>
               ))}
             </div>
-            {customSettings.rituals.length < 10 && (
+            {customSettings.rituals.length < 15 && (
               <button onClick={addRitual} className="mt-3 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--blue-bright)' }}>
                 + Ajouter un rituel
               </button>
