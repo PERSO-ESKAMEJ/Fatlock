@@ -175,7 +175,7 @@ export default function Settings() {
   }
 
   function handleReset() {
-    const userId = profile.id;
+    const userId = profile!.id;
     const isLastEntry = entries.length <= 1;
     resetProfile();
     removeUserData(userId);
