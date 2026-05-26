@@ -179,4 +179,5 @@ export interface MasterLeaderboard {
     topStreak: string;
     topCredibility: string;
   };
+  aiAnalyses?: AIAnalysisResult[];
 }

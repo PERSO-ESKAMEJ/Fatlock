@@ -16,7 +16,7 @@ import { MasterLeaderboard } from '../types';
 export default function Leaderboard() {
   const profile = useProfileStore((s) => s.profile)!;
   const challenge = useProfileStore((s) => s.challenge)!;
-  const { dailyLogs, bodyCompositions, weeklyScores } = useLogStore();
+  const { dailyLogs, bodyCompositions, weeklyScores, addAIResult } = useLogStore();
   const masterLeaderboard = useLeaderboardStore((s) => s.masterLeaderboard);
   const setMasterLeaderboard = useLeaderboardStore((s) => s.setMasterLeaderboard);
   const { showToast } = useToast();
@@ -84,7 +84,11 @@ export default function Leaderboard() {
         .eq('challenge_id', challenge.id)
         .single();
       if (error || !data) { showToast('Aucun classement disponible', 'error'); return; }
-      setMasterLeaderboard(data.data as MasterLeaderboard);
+      const lb = data.data as MasterLeaderboard;
+      setMasterLeaderboard(lb);
+      // Extraire et sauvegarder localement le résultat IA du participant courant
+      const myAI = lb.aiAnalyses?.find((r) => r.userId === profile.id);
+      if (myAI) addAIResult(myAI);
       showToast('Classement mis à jour !', 'success');
     } catch {
       showToast('Erreur Supabase', 'error');

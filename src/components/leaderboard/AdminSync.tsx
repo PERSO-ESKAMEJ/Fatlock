@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
-import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto } from '../../types';
+import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
 import { calcCurrentStreak, getTier, calcCompositeScore } from '../../lib/scoring';
 import { getCurrentWeek } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
@@ -176,6 +176,7 @@ export default function AdminSync() {
     setAiProgress('');
     try {
       const updatedEntries = masterLeaderboard.entries.map((e) => ({ ...e }));
+      const collectedAiResults: AIAnalysisResult[] = [];
 
       for (const recap of processedRecaps) {
         const photos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek) ?? null;
@@ -198,6 +199,7 @@ export default function AdminSync() {
             apiKey: challenge.anthropicApiKey,
           });
           addAIResult(result);
+          collectedAiResults.push(result);
           const entry = updatedEntries.find((e) => e.userId === recap.profile.id);
           if (entry) entry.weeklyCredibilityScore = result.credibilityScore;
         } catch (err) {
@@ -213,6 +215,7 @@ export default function AdminSync() {
         ...masterLeaderboard,
         updatedAt: new Date().toISOString(),
         entries: updatedEntries,
+        aiAnalyses: collectedAiResults,
         weeklyHighlights: {
           ...masterLeaderboard.weeklyHighlights,
           topCredibility: topCred?.userId ?? '',
