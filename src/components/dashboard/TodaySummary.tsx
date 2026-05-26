@@ -5,24 +5,33 @@ import { useChallengeStore } from '../../store/useChallengeStore';
 import { getTodayStr } from '../../lib/dailyCode';
 import { getRitualsForDay, getMaxPointsForDay } from '../../constants/rituals';
 import { calcDayRitualPoints } from '../../lib/scoring';
+import { INTENSITY_MULTIPLIER } from '../../lib/nutrition';
 import Button from '../ui/Button';
 
 export default function TodaySummary() {
   const profile = useProfileStore((s) => s.profile)!;
+  const challenge = useProfileStore((s) => s.challenge)!;
   const getDailyLog = useLogStore((s) => s.getDailyLog);
   const { isCodeConfirmed } = useChallengeStore();
   const navigate = useNavigate();
+
+  const isCustom = challenge.challengeType === 'custom';
+  const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
   const today = getTodayStr();
   const confirmed = isCodeConfirmed(today);
   const log = getDailyLog(profile.id, today);
   const dayType = log?.dayType ?? 'repos';
-  const rituals = getRitualsForDay(dayType, profile.intensity);
+  const rituals = isCustom && customRituals
+    ? customRituals.map((r) => ({ id: r.id }))
+    : getRitualsForDay(dayType, profile.intensity);
   const completedCount = log ? Object.values(log.rituals).filter(Boolean).length : 0;
   const totalCount = rituals.length;
-  const earnedPts = log ? calcDayRitualPoints(log, profile.intensity) : 0;
-  const maxPts = getMaxPointsForDay(dayType, profile.intensity);
-  const pct = Math.round((completedCount / totalCount) * 100);
+  const earnedPts = log ? calcDayRitualPoints(log, profile.intensity, customRituals ?? undefined) : 0;
+  const maxPts = isCustom && customRituals
+    ? Math.round(customRituals.reduce((s, r) => s + r.points * 10, 0) * INTENSITY_MULTIPLIER[profile.intensity])
+    : getMaxPointsForDay(dayType, profile.intensity);
+  const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <div className="panel p-4">

@@ -11,8 +11,11 @@ export default function NutritionSnapshot() {
   const navigate = useNavigate();
 
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const nutritionEnabled = challenge.challengeType !== 'custom' || (challenge.customSettings?.nutritionEnabled ?? true);
   const weight = latest?.weightKg ?? profile.startWeight;
   const targets = calculateTargets(profile, weight, durationWeeks);
+
+  if (!nutritionEnabled) return null;
 
   const macros = [
     { label: 'Protéines', g: targets.protein, kcal: targets.protein * 4, color: 'var(--blue-bright)' },
