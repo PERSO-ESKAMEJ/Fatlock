@@ -26,20 +26,26 @@ function buildPrompt(
 
   // ── Semaine 1 : évaluation des mesures initiales uniquement ────────────────
   if (weekNumber === 1 || !prevCompo) {
+    const photoContext = hasPrevPhoto
+      ? `Tu reçois DEUX photos : d'abord une photo S0 (prise avant le début du challenge), puis une photo S1 (après la première semaine). Concentre-toi sur la photo S1 pour évaluer les mesures actuelles. La différence entre S0 et S1 en une semaine est minime — ne l'évalue pas.`
+      : `Tu reçois une seule photo prise en semaine 1.`;
+
     return `Tu es un expert en composition corporelle.
 
-Semaine 1/8 — Mesures initiales déclarées :
+Semaine 1/8 — ${photoContext}
+
+Mesures de départ déclarées :
 - Poids : ${currCompo.weightKg} kg
 - Masse grasse : ${currCompo.fatMassKg} kg (${fatPct}%)
 - Masse musculaire : ${currCompo.muscleMassKg} kg
 - Eau : ${currCompo.waterPercent?.toFixed(0) ?? 'N/A'}%
 
-C'est la première semaine du challenge. Il n'y a aucune transformation à évaluer. Ta seule mission : estimer si ces mesures de DÉPART sont physiologiquement plausibles au regard de la photo.
+C'est la première semaine. Il n'y a aucune transformation à évaluer. Ta seule mission : estimer si ces mesures de DÉPART sont physiologiquement plausibles au regard du physique visible sur la photo S1.
 
 Évalue :
 1. Le % de masse grasse déclaré (${fatPct}%) correspond-il à la silhouette visible ?
 2. La masse musculaire déclarée (${currCompo.muscleMassKg} kg) est-elle cohérente avec les proportions visibles ?
-3. Y a-t-il des incohérences majeures entre l'apparence et les chiffres de base ?
+3. Y a-t-il des incohérences majeures entre l'apparence et les chiffres ?
 
 Ne pénalise PAS l'absence de transformation — aucune n'est attendue en semaine 1.
 
