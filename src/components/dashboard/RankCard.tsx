@@ -14,11 +14,12 @@ export default function RankCard() {
 
   const customRituals = challenge.challengeType === 'custom' ? challenge.customSettings?.rituals : undefined;
 
-  // Live ego points: weekly scores + all confirmed daily logs (rituals update in real time)
-  const unscoredLogs = logs.filter((l) => l.codeConfirmed);
-  const weeklyEgo = weeklyScores.reduce((sum, s) => sum + s.egoPoints + s.streakBonus + s.aiBonus, 0);
-  const liveDailyPts = unscoredLogs.reduce((sum, l) => sum + calcDayRitualPoints(l, profile.intensity, customRituals), 0);
-  const totalEgo = weeklyEgo + liveDailyPts;
+  // Live ego points : tous les logs confirmés (rituels) + bonuses des semaines scorées
+  // On n'additionne PAS weeklyScore.egoPoints car ils sont déjà comptés dans liveDailyPts
+  const confirmedLogs = logs.filter((l) => l.codeConfirmed);
+  const weeklyBonuses = weeklyScores.reduce((sum, s) => sum + s.streakBonus + s.aiBonus, 0);
+  const liveDailyPts = confirmedLogs.reduce((sum, l) => sum + calcDayRitualPoints(l, profile.intensity, customRituals), 0);
+  const totalEgo = weeklyBonuses + liveDailyPts;
 
   const tier = getTier(totalEgo);
   const tierName = displayTier(tier, profile.sex);
@@ -26,7 +27,6 @@ export default function RankCard() {
   const streak = calcCurrentStreak(logs, profile.intensity, customRituals);
   const rank = entry?.currentRank ?? '—';
 
-  const confirmedLogs = logs.filter((l) => l.codeConfirmed);
   const adherencePct = logs.length > 0
     ? Math.round((confirmedLogs.length / Math.max(1, logs.length)) * 100)
     : 0;

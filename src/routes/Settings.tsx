@@ -74,10 +74,15 @@ export default function Settings() {
     const logState = useLogStore.getState();
     const challengeState = useChallengeStore.getState();
     const { masterLeaderboard } = useLeaderboardStore.getState();
+    const profileState = useProfileStore.getState();
     const data = {
-      _version: 1,
+      _version: 2,
       _exportedAt: new Date().toISOString(),
       _note: 'Les photos ne sont pas incluses dans ce backup (stockage local uniquement). Exportez-les manuellement si nécessaire.',
+      // v2 : tous les groupes sont sauvegardés
+      activeId: profileState.activeId,
+      entries: profileState.entries,
+      // Rétro-compatibilité v1
       profile,
       challenge,
       logs: {
@@ -108,8 +113,10 @@ export default function Settings() {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target?.result as string);
-        if (!parsed.profile || !parsed.challenge || !parsed.logs) {
-          showToast('Fichier invalide', 'error');
+        const isV2 = parsed._version === 2 && Array.isArray(parsed.entries) && parsed.activeId && parsed.logs;
+        const isV1 = !parsed._version && parsed.profile && parsed.challenge && parsed.logs;
+        if (!isV1 && !isV2) {
+          showToast('Fichier invalide ou format inconnu', 'error');
           return;
         }
         setPendingRestore(parsed);
@@ -124,21 +131,37 @@ export default function Settings() {
 
   function handleConfirmRestore() {
     if (!pendingRestore) return;
-    const { profile: p, challenge: c, logs, challengeStore, masterLeaderboard } = pendingRestore as Record<string, unknown>;
+    const { logs, challengeStore, masterLeaderboard } = pendingRestore as Record<string, unknown>;
+    const version = (pendingRestore._version as number) ?? 1;
 
-    const profileStore = useProfileStore.getState();
-    profileStore.reset();
-    const restoredProfile = p as UserProfile;
-    const restoredChallenge = c as ChallengeConfig;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (useProfileStore as any).setState((s: typeof profileStore) => {
-      const newEntry = { profile: restoredProfile, challenge: restoredChallenge };
-      const existingIdx = s.entries.findIndex((e) => e.profile.id === restoredProfile.id);
-      const entries = existingIdx >= 0
-        ? s.entries.map((e, i) => i === existingIdx ? newEntry : e)
-        : [...s.entries, newEntry];
-      return { entries, activeId: restoredProfile.id, profile: restoredProfile, challenge: restoredChallenge };
-    });
+    if (version >= 2) {
+      const { entries: restoredEntries, activeId: restoredActiveId } = pendingRestore as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const typedEntries = restoredEntries as any[];
+      const activeEntry = typedEntries.find((e: any) => e.profile.id === restoredActiveId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (useProfileStore as any).setState({
+        entries: typedEntries,
+        activeId: restoredActiveId,
+        profile: activeEntry?.profile ?? null,
+        challenge: activeEntry?.challenge ?? null,
+      });
+    } else {
+      const { profile: p, challenge: c } = pendingRestore as Record<string, unknown>;
+      const profileStore = useProfileStore.getState();
+      profileStore.reset();
+      const restoredProfile = p as UserProfile;
+      const restoredChallenge = c as ChallengeConfig;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (useProfileStore as any).setState((s: typeof profileStore) => {
+        const newEntry = { profile: restoredProfile, challenge: restoredChallenge };
+        const existingIdx = s.entries.findIndex((e) => e.profile.id === restoredProfile.id);
+        const newEntries = existingIdx >= 0
+          ? s.entries.map((e, i) => i === existingIdx ? newEntry : e)
+          : [...s.entries, newEntry];
+        return { entries: newEntries, activeId: restoredProfile.id, profile: restoredProfile, challenge: restoredChallenge };
+      });
+    }
 
     const logTyped = logs as Record<string, unknown>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -286,6 +309,11 @@ export default function Settings() {
             ?join={challenge.groupCode}&gname={encodeURIComponent(challenge.groupName)}{challenge.supabaseUrl ? ' +supabase' : ''}
           </button>
           <p className="text-xs text-[var(--muted2)] mt-1">Clique pour copier. Partage ce lien aux participants.</p>
+          {challenge.supabaseAnonKey && (
+            <div className="mt-2 px-2 py-1.5 rounded text-xs" style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)', color: 'var(--muted)' }}>
+              <span style={{ color: 'var(--gold)' }}>⚠</span> Ce lien contient ta clé Supabase anon. Elle est publique par nature mais ne la partage qu'avec les participants de confiance.
+            </div>
+          )}
         </div>
       </div>
 
@@ -419,9 +447,15 @@ export default function Settings() {
       </Modal>
 
       <Modal open={showRestoreConfirm} onClose={() => { setShowRestoreConfirm(false); setPendingRestore(null); }} title="Restaurer ce backup ?">
-        <p className="text-sm text-[var(--muted)] mb-2">
-          Les données actuelles du profil <span className="font-bold text-[var(--ink)]">{profile.name}</span> seront écrasées par le backup.
-        </p>
+        {pendingRestore?._version === 2 ? (
+          <p className="text-sm text-[var(--muted)] mb-2">
+            Ce backup contient <span className="font-bold text-[var(--ink)]">{(pendingRestore.entries as unknown[])?.length ?? '?'} groupe(s)</span>. Tous tes groupes actuels seront remplacés.
+          </p>
+        ) : (
+          <p className="text-sm text-[var(--muted)] mb-2">
+            Les données actuelles du profil <span className="font-bold text-[var(--ink)]">{profile.name}</span> seront écrasées par le backup.
+          </p>
+        )}
         <p className="text-xs text-[var(--muted2)] mb-4">
           L'app rechargera automatiquement après la restauration.
         </p>

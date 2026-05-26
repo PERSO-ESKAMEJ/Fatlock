@@ -124,16 +124,32 @@ export default function WeeklyCheckin() {
     );
   }
 
-  if (alreadyDone && step !== 3) {
+  // S0 verrouillé une fois le challenge démarré — anti-triche
+  if (isBaseline && alreadyDone && challengeState !== 'pending' && step !== 3) {
     return (
-      <PageWrapper title={isBaseline ? 'Mesures S0' : `Check-in S${currentWeek}`}>
+      <PageWrapper title="Mesures S0">
+        <div className="panel p-6 text-center">
+          <div className="text-4xl mb-3">🔒</div>
+          <div className="font-bold text-lg text-[var(--ink)] mb-1">Mesures S0 verrouillées</div>
+          <p className="text-sm text-[var(--muted)]">
+            Le challenge a démarré. Les mesures de départ ne peuvent plus être modifiées pour garantir l'équité du classement.
+          </p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  // Check-ins hebdomadaires : une seule validation par semaine
+  if (!isBaseline && alreadyDone && step !== 3) {
+    return (
+      <PageWrapper title={`Check-in S${currentWeek}`}>
         <div className="panel p-6 text-center">
           <div className="text-4xl mb-3">✅</div>
           <div className="font-bold text-lg text-[var(--ink)] mb-1">
-            {isBaseline ? 'Mesures de départ déjà enregistrées' : `Semaine ${currentWeek} déjà validée`}
+            Semaine {currentWeek} déjà validée
           </div>
           <p className="text-sm text-[var(--muted)]">
-            {isBaseline ? 'Tes mesures initiales S0 sont sauvegardées.' : 'Reviens la semaine prochaine pour le prochain check-in.'}
+            Reviens la semaine prochaine pour le prochain check-in.
           </p>
         </div>
       </PageWrapper>

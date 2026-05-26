@@ -41,6 +41,17 @@ export default function PhotoUploadCrop({ label, onSave, existing, required }: P
   const imgRef = useRef<HTMLImageElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    setCompletedCrop({
+      unit: 'px',
+      x: Math.round(img.width * 0.1),
+      y: Math.round(img.height * 0.1),
+      width: Math.round(img.width * 0.8),
+      height: Math.round(img.height * 0.8),
+    });
+  }
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -118,6 +129,7 @@ export default function PhotoUploadCrop({ label, onSave, existing, required }: P
               ref={imgRef}
               src={src}
               alt="preview"
+              onLoad={handleImageLoad}
               style={{ maxHeight: 400, maxWidth: '100%' }}
             />
           </ReactCrop>

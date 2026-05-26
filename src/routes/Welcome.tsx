@@ -157,7 +157,8 @@ export default function Welcome() {
       : `CUSTOMLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`;
 
     const challenge: ChallengeConfig = {
-      id: mode === 'join' && cidParam ? cidParam : crypto.randomUUID(),
+      // Sans lien d'invitation, on dérive l'ID du code groupe pour la cohérence entre participants
+      id: mode === 'join' && cidParam ? cidParam : (mode === 'join' ? `grp-${groupCode}` : crypto.randomUUID()),
       groupName: groupName.trim() || defaultName,
       groupCode,
       groupSecret,
@@ -732,6 +733,17 @@ export default function Welcome() {
         <div className="space-y-4">
           {mode === 'join' ? (
             <div className="space-y-4">
+              {/* Avertissement si rejoindre sans lien d'invitation */}
+              {!hasJoinLink && (
+                <div
+                  className="p-3 rounded-lg text-xs"
+                  style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.3)', color: 'var(--muted)' }}
+                >
+                  <div className="font-bold mb-1" style={{ color: 'var(--gold)' }}>⚠ Tu rejoins sans lien d'invitation</div>
+                  Sans le lien officiel, certaines informations (date de début, durée, sync Supabase) doivent être renseignées manuellement. Demande le lien à l'admin pour une configuration automatique.
+                </div>
+              )}
+
               {gnameParam ? (
                 <div>
                   <label>Groupe</label>
@@ -742,7 +754,18 @@ export default function Welcome() {
                     {groupName}
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div>
+                  <label>Nom du groupe</label>
+                  <input
+                    type="text"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder="Ex: FATLOCK Juillet"
+                  />
+                </div>
+              )}
+
               <div>
                 <label>Code du groupe (6 caractères)</label>
                 <input
@@ -758,7 +781,8 @@ export default function Welcome() {
                   <p className="text-xs text-[var(--muted)] mt-1">Code récupéré depuis le lien d'invitation.</p>
                 )}
               </div>
-              {sdParam && (
+
+              {sdParam ? (
                 <div>
                   <label>Date de début</label>
                   <div
@@ -768,8 +792,20 @@ export default function Welcome() {
                     {new Date(sdParam + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
                 </div>
+              ) : (
+                <div>
+                  <label>Date de début du challenge</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{ colorScheme: 'dark' }}
+                  />
+                  <p className="text-xs text-[var(--muted)] mt-1">Demande cette date à l'admin du groupe.</p>
+                </div>
               )}
-              {dwParam && (
+
+              {dwParam ? (
                 <div>
                   <label>Durée du challenge</label>
                   <div
@@ -779,8 +815,19 @@ export default function Welcome() {
                     {durationWeeks} semaines
                   </div>
                 </div>
+              ) : (
+                <div>
+                  <label>Durée : <span className="font-mono font-bold text-[var(--cyan)]">{durationWeeks} semaines</span></label>
+                  <input
+                    type="range" min={4} max={24} step={1} value={durationWeeks}
+                    onChange={(e) => setDurationWeeks(parseInt(e.target.value))}
+                    className="w-full mt-1"
+                  />
+                  <div className="flex justify-between text-xs text-[var(--muted)] mt-1"><span>4 sem.</span><span>24 sem.</span></div>
+                </div>
               )}
-              {stakeParam && (
+
+              {stakeParam ? (
                 <div>
                   <label>Mise en jeu</label>
                   <div
@@ -789,6 +836,16 @@ export default function Welcome() {
                   >
                     {stakeParam} €
                   </div>
+                </div>
+              ) : (
+                <div>
+                  <label>Mise en jeu (€)</label>
+                  <input
+                    type="number"
+                    value={stake}
+                    onChange={(e) => setStake(e.target.value)}
+                    min="0" step="5" placeholder="20"
+                  />
                 </div>
               )}
             </div>

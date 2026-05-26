@@ -172,6 +172,22 @@ export default function Dashboard() {
         </h1>
       </div>
 
+      {/* Late joiner warning */}
+      {currentWeek > 1 && !s0Done && (
+        <div
+          className="mb-4 p-4 rounded-xl text-sm"
+          style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.35)', color: 'var(--muted)' }}
+        >
+          <div className="font-bold mb-1" style={{ color: 'var(--gold)' }}>
+            ⚠ Arrivée en S{currentWeek} — départ manquant
+          </div>
+          <p className="text-xs leading-relaxed">
+            Tu as rejoint le challenge en cours. Les {currentWeek - 1} semaine{currentWeek - 1 > 1 ? 's' : ''} précédente{currentWeek - 1 > 1 ? 's' : ''} ne peuvent pas être récupérées — ton score sera impacté par rapport aux membres présents depuis le J1.
+            Enregistre tes mesures S0 dès maintenant pour pouvoir participer au vote final.
+          </p>
+        </div>
+      )}
+
       {/* Daily code — top priority */}
       <div className="mb-4">
         <DailyCodeUnlock />
