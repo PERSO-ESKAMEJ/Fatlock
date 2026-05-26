@@ -375,11 +375,26 @@ export default function Settings() {
           ) : (
             <div className="space-y-2">
               {members.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg">
-                  <span className="text-sm font-bold text-[var(--ink)]">{m.user_name}</span>
-                  <span className="text-xs text-[var(--muted)]">
-                    {new Date(m.joined_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-[var(--ink)] truncate">{m.user_name}</div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {new Date(m.joined_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const sb = supabase();
+                      if (!sb) return;
+                      await sb.from('group_members').delete().eq('challenge_id', challenge.id).eq('user_id', m.user_id);
+                      setMembers((prev: { user_id: string; user_name: string; joined_at: string }[]) => prev.filter((x) => x.user_id !== m.user_id));
+                      showToast(`${m.user_name} retiré`, 'success');
+                    }}
+                    className="text-xs px-2 py-1 rounded flex-shrink-0 transition-all hover:opacity-80"
+                    style={{ background: 'rgba(255,77,94,0.1)', color: 'var(--red)', border: '1px solid rgba(255,77,94,0.3)' }}
+                  >
+                    Retirer
+                  </button>
                 </div>
               ))}
               <p className="text-xs text-[var(--muted2)] pt-1">{members.length} participant{members.length > 1 ? 's' : ''} · Toi non inclus</p>
