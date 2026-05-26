@@ -46,21 +46,25 @@ export default function Leaderboard() {
       );
       exportRecapAsFile(recap);
 
-      // Also push to Supabase if configured (non-blocking)
       const sb = supabase();
       if (sb) {
-        sb.from('recaps').upsert({
+        const { error } = await sb.from('recaps').upsert({
           challenge_id: challenge.id,
           user_id: profile.id,
           week_number: currentWeek,
           exported_at: new Date().toISOString(),
           data: recap,
-        }, { onConflict: 'challenge_id,user_id,week_number' }).then(({ error }) => {
-          if (error) console.warn('Supabase recap push failed:', error);
-        });
-      }
+        }, { onConflict: 'challenge_id,user_id,week_number' });
 
-      showToast(sb ? 'Récap exporté et synchronisé !' : 'Récap exporté !', 'success');
+        if (error) {
+          console.error('Supabase recap push failed:', error);
+          showToast('Récap exporté (⚠ sync Supabase échoué — partage le fichier manuellement)', 'error');
+        } else {
+          showToast('Récap envoyé à l\'admin !', 'success');
+        }
+      } else {
+        showToast('Récap exporté — envoie le fichier à l\'admin', 'success');
+      }
     } catch (err) {
       showToast('Erreur lors de l\'export', 'error');
       console.error(err);

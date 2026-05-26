@@ -47,7 +47,7 @@ export default function AdminSync() {
     try {
       const { data, error } = await sb
         .from('recaps')
-        .select('user_id, exported_at, data->userName')
+        .select('user_id, exported_at, data->>userName')
         .eq('challenge_id', challenge.id)
         .eq('week_number', currentWeek);
       if (error || !data) return;
