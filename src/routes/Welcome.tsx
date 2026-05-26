@@ -447,7 +447,7 @@ export default function Welcome() {
                       onChange={(e) => setTrainingDays((td) => ({ ...td, [day]: (e.target.value as DayType) || null }))}
                     >
                       <option value="">— Repos</option>
-                      {DAY_TYPES.filter((dt): dt is { value: DayType; label: string } => dt.value !== '').map((dt) => (
+                      {DAY_TYPES.map((dt) => (
                         <option key={dt.value} value={dt.value}>{dt.label}</option>
                       ))}
                     </select>
