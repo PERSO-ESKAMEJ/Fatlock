@@ -117,6 +117,27 @@ export async function deleteWeeklyPhoto(userId: string, weekNumber: number): Pro
 export async function clearAllPhotos(): Promise<void> {
   const db = await getDB();
   await db.clear('weeklyPhotos');
+
+  // Also delete from Supabase Storage
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  const userId = useProfileStore.getState().profile?.id;
+  if (!sb || !challengeId || !userId) return;
+
+  const folder = `${challengeId}/${userId}`;
+  const { data } = await sb.storage.from('fatlock-photos').list(folder);
+  if (data && data.length > 0) {
+    const paths = data.map((f) => `${folder}/${f.name}`);
+    await sb.storage.from('fatlock-photos').remove(paths);
+  }
+}
+
+export async function deletePhotoFromSupabase(userId: string, weekNumber: number): Promise<void> {
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  if (!sb || !challengeId) return;
+  const path = storagePath(challengeId, userId, weekNumber);
+  await sb.storage.from('fatlock-photos').remove([path]);
 }
 
 // Aliases used by components

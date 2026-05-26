@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
@@ -11,6 +11,12 @@ import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import DramaReveal from './DramaReveal';
 
+interface RecapStatus {
+  userId: string;
+  userName: string;
+  exportedAt: string;
+}
+
 export default function AdminSync() {
   const challenge = useProfileStore((s) => s.challenge)!;
   const addAIResult = useLogStore((s) => s.addAIResult);
@@ -20,13 +26,45 @@ export default function AdminSync() {
 
   const [recaps, setRecaps] = useState<RecapFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [participantStatus, setParticipantStatus] = useState<RecapStatus[]>([]);
   const [showReveal, setShowReveal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentWeek = getCurrentWeek(challenge.startDate);
+  const sb = supabase();
+
+  async function fetchStatus() {
+    if (!sb) return;
+    setStatusLoading(true);
+    try {
+      const { data, error } = await sb
+        .from('recaps')
+        .select('user_id, exported_at, data->userName')
+        .eq('challenge_id', challenge.id)
+        .eq('week_number', currentWeek);
+      if (error || !data) return;
+      setParticipantStatus(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data.map((row: any) => ({
+          userId: row.user_id as string,
+          userName: (row.userName as string) ?? row.user_id,
+          exportedAt: row.exported_at as string,
+        }))
+      );
+    } catch {
+      // silencieux — pas de toast pour le refresh auto
+    } finally {
+      setStatusLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWeek]);
 
   async function handleFetchRecapsFromSupabase() {
-    const sb = supabase();
     if (!sb) { showToast('Supabase non configuré', 'error'); return; }
     setLoading(true);
     try {
@@ -121,11 +159,9 @@ export default function AdminSync() {
         });
       }
 
-      // Assign ranks by composite score descending
       entries.sort((a, b) => b.compositeScore - a.compositeScore);
       entries.forEach((e, i) => { e.currentRank = i + 1; });
 
-      // Compute highlights
       const biggestMover = [...entries].sort((a, b) => (b.previousRank - b.currentRank) - (a.previousRank - a.currentRank))[0];
       const topStreak = [...entries].sort((a, b) => b.currentStreak - a.currentStreak)[0];
       const topCred = [...entries].sort((a, b) => (b.weeklyCredibilityScore ?? 0) - (a.weeklyCredibilityScore ?? 0))[0];
@@ -144,7 +180,6 @@ export default function AdminSync() {
 
       setMasterLeaderboard(lb);
 
-      // Export master file
       const blob = new Blob([JSON.stringify(lb)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -153,8 +188,6 @@ export default function AdminSync() {
       a.click();
       URL.revokeObjectURL(url);
 
-      // Push to Supabase if configured
-      const sb = supabase();
       if (sb) {
         await sb.from('master_leaderboards').upsert(
           { challenge_id: challenge.id, updated_at: lb.updatedAt, data: lb },
@@ -173,24 +206,67 @@ export default function AdminSync() {
 
   return (
     <div className="space-y-4">
+
+      {/* Statut des récaps — visible uniquement si Supabase configuré */}
+      {sb && (
+        <div className="panel2 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+              Récaps S{currentWeek} reçus
+            </div>
+            <button
+              onClick={fetchStatus}
+              disabled={statusLoading}
+              className="text-xs text-[var(--blue-bright)] hover:opacity-70 transition-opacity"
+            >
+              {statusLoading ? '...' : '↻ Rafraîchir'}
+            </button>
+          </div>
+
+          {participantStatus.length === 0 ? (
+            <p className="text-xs text-[var(--muted2)]">
+              Aucun récap reçu pour cette semaine. Les participants doivent cliquer sur "Générer mon récap".
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {participantStatus.map((p) => (
+                <div key={p.userId} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: 'var(--green)' }}>✓</span>
+                    <span className="text-sm font-bold text-[var(--ink)]">{p.userName}</span>
+                  </div>
+                  <span className="text-xs text-[var(--muted)]">
+                    {new Date(p.exportedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {participantStatus.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-[var(--border)]">
+              <Button
+                className="w-full"
+                onClick={handleFetchRecapsFromSupabase}
+                disabled={loading}
+                loading={loading}
+              >
+                Charger les {participantStatus.length} récap(s) et analyser →
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Chargement manuel (fallback sans Supabase) */}
       <div className="panel2 p-4">
         <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">
-          Admin — Sync hebdomadaire
+          {sb ? 'Chargement manuel (fallback)' : 'Admin — Sync hebdomadaire'}
         </div>
 
         <div className="space-y-3">
-          {supabase() && (
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={handleFetchRecapsFromSupabase}
-              disabled={loading}
-            >
-              ↓ Charger les récaps depuis Supabase (S{currentWeek})
-            </Button>
-          )}
           <div>
-            <label>{supabase() ? 'Ou charger manuellement (.json)' : 'Charger les récaps de la team'}</label>
+            <label>Charger les récaps (.json)</label>
             <input
               ref={fileRef}
               type="file"
@@ -202,8 +278,8 @@ export default function AdminSync() {
           </div>
 
           {recaps.length > 0 && (
-            <div className="text-sm text-[var(--green)]">
-              {recaps.length} participant(s) chargé(s) : {recaps.map((r) => r.userName).join(', ')}
+            <div className="text-sm" style={{ color: 'var(--green)' }}>
+              {recaps.length} participant(s) prêt(s) : {recaps.map((r) => r.userName).join(', ')}
             </div>
           )}
 
