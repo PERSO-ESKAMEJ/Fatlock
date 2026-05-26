@@ -324,6 +324,7 @@ export default function Settings() {
             <span className="font-mono font-bold" style={{ color: 'var(--cyan)' }}>{todayCode}</span>
           </div>
         </div>
+        {profile.isAdmin && (
         <div className="mt-3 pt-3 border-t border-[var(--border)]">
           <div className="text-xs text-[var(--muted)] mb-1">Lien d'invitation</div>
           <button
@@ -350,6 +351,7 @@ export default function Settings() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Membres du groupe (admin only) */}
