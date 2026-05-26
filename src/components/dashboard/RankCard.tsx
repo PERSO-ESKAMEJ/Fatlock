@@ -38,22 +38,20 @@ export default function RankCard() {
     : 0;
 
   const motivationM: Record<string, string> = {
-    top: 'Tu domines. Continue.',
-    mid: 'Reste dans le top. Ils rattrapent.',
-    low: 'Le mur FATLOCK approche. Réagis.',
+    top: 'Tu règnes. Aucun relâchement.',
+    mid: 'Ils se rapprochent. Ton ego ne dort pas.',
+    low: 'L\'ego ou la défaite. Réagis maintenant.',
   };
   const motivationF: Record<string, string> = {
-    top: 'Tu te révèles. Impressionnant.',
-    mid: 'Continue à te transformer.',
-    low: 'Tu es plus forte que ça. Réagis.',
+    top: 'Tu es inarrêtable. Maintiens.',
+    mid: 'Elles regardent. Prouve-leur.',
+    low: 'Ton ego ne s\'avoue pas vaincu.',
   };
 
   const rankNum = typeof rank === 'number' ? rank : null;
   const position = rankNum === null ? 'none' : rankNum <= 2 ? 'top' : rankNum >= lbEntries - 1 ? 'low' : 'mid';
 
-  const motivationNone = profile.sex === 'M'
-    ? 'Le challenge commence. Pose les bases.'
-    : 'Le challenge commence. Pose les bases.';
+  const motivationNone = 'L\'histoire de ton ego commence ici.';
   const motivation = position === 'none'
     ? motivationNone
     : profile.sex === 'M' ? motivationM[position] : motivationF[position];

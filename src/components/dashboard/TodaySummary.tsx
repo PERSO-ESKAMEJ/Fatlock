@@ -19,7 +19,7 @@ export default function TodaySummary() {
   const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
   const today = getTodayStr();
-  const confirmed = isCodeConfirmed(today);
+  const confirmed = isCodeConfirmed(challenge.groupCode, today);
   const log = getDailyLog(profile.id, today);
   const dayType = log?.dayType ?? 'repos';
   const rituals = isCustom && customRituals

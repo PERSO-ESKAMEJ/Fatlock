@@ -146,9 +146,13 @@ export default function Progress() {
         <div className="panel p-4">
           <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Courbe de poids</div>
           {weightData.length < 2 ? (
-            <p className="text-sm text-[var(--muted)] text-center py-8">
-              Pas encore assez de données. Complète ton premier check-in.
-            </p>
+            <div className="text-center py-8">
+              <div className="text-3xl mb-3">📈</div>
+              <p className="text-sm text-[var(--muted)] mb-4">Aucune donnée encore.<br />Fais ton premier check-in pour voir ta courbe de transformation.</p>
+              <button onClick={() => navigate('/checkin')} className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider" style={{ background: 'var(--blue)', color: 'white' }}>
+                Faire mon check-in →
+              </button>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={weightData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
@@ -169,7 +173,13 @@ export default function Progress() {
         <div className="panel p-4">
           <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Composition corporelle</div>
           {bodyData.length < 1 ? (
-            <p className="text-sm text-[var(--muted)] text-center py-8">Pas encore de données.</p>
+            <div className="text-center py-8">
+              <div className="text-3xl mb-3">💪</div>
+              <p className="text-sm text-[var(--muted)] mb-4">Aucune composition enregistrée.<br />Commence par les mesures S0 puis un check-in hebdomadaire.</p>
+              <button onClick={() => navigate('/checkin?week=0')} className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider" style={{ background: 'var(--blue)', color: 'white' }}>
+                Mesures de départ →
+              </button>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={bodyData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
@@ -265,9 +275,13 @@ export default function Progress() {
           )}
 
           {aiResults.length === 0 ? (
-            <p className="text-sm text-[var(--muted)] text-center py-8">
-              Aucune analyse IA disponible. L'admin déclenche l'analyse lors du sync hebdomadaire.
-            </p>
+            <div className="text-center py-8">
+              <div className="text-3xl mb-3">🤖</div>
+              <p className="text-sm text-[var(--muted)]">
+                Ton score de crédibilité apparaîtra ici après le premier sync hebdomadaire de l'admin.<br />
+                <span className="text-xs">Envoie ton récap à l'admin depuis l'onglet Classement.</span>
+              </p>
+            </div>
           ) : (
             aiResults.sort((a, b) => b.weekNumber - a.weekNumber).map((result) => (
               <AIAnalysisCard key={result.weekNumber} result={result} showPrivate />

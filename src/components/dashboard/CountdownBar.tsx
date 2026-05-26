@@ -13,8 +13,8 @@ export default function CountdownBar() {
   return (
     <div className="panel p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
-          Challenge en cours
+        <div className="text-xs font-bold uppercase tracking-widest" style={{ color: daysLeft <= 7 ? 'var(--red)' : 'var(--muted)' }}>
+          {daysLeft <= 3 ? '⚡ Sprint final' : 'Transformation en cours'}
         </div>
         <div className="font-mono text-xs text-[var(--muted)]">
           Semaine <span className="text-[var(--ink)] font-bold">{currentWeek}</span>/{durationWeeks}

@@ -30,7 +30,7 @@ export default function DailyCodeUnlock() {
       dayType: existing?.dayType ?? 'repos',
       rituals: existing?.rituals ?? {},
     });
-    showToast('Code confirmé ! Rituels débloqués.', 'success');
+    showToast('Journée activée ! Rituels débloqués.', 'success');
     setInput('');
     setError('');
   }
@@ -41,7 +41,7 @@ export default function DailyCodeUnlock() {
       return;
     }
     if (!isTodaysCode(challenge.groupSecret, input.trim())) {
-      setError('Code incorrect. Vérifie auprès du groupe.');
+      setError('Code invalide — demande le code du jour à l\'admin.');
       return;
     }
     confirmAndLog();
@@ -56,8 +56,8 @@ export default function DailyCodeUnlock() {
         <div className="flex items-center gap-3">
           <span className="text-xl">✓</span>
           <div>
-            <div className="text-sm font-bold text-[var(--green)]">Code du jour confirmé</div>
-            <div className="text-xs text-[var(--muted)]">{today}</div>
+            <div className="text-sm font-bold text-[var(--green)]">Journée activée</div>
+            <div className="text-xs text-[var(--muted)]">{today} · Rituels débloqués</div>
           </div>
         </div>
         {profile.isAdmin && (
@@ -84,7 +84,7 @@ export default function DailyCodeUnlock() {
         style={{ borderColor: 'var(--cyan)' }}
       >
         <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--cyan)' }}>
-          Code du jour — à partager
+          Code du jour — à partager maintenant
         </div>
         <div className="flex items-center justify-between gap-4 mb-4">
           <div
@@ -95,11 +95,11 @@ export default function DailyCodeUnlock() {
             {dailyCode}
           </div>
           <div className="text-xs text-[var(--muted)] text-right">
-            Clique sur le code<br />pour le copier
+            Clique pour copier<br />Envoie-le sur WhatsApp / Slack
           </div>
         </div>
         <Button className="w-full" onClick={handleConfirm}>
-          Déverrouiller mes rituels
+          Activer ma journée
         </Button>
       </div>
     );
@@ -115,7 +115,7 @@ export default function DailyCodeUnlock() {
         🔐 Code du jour requis
       </div>
       <p className="text-sm text-[var(--muted)] mb-3">
-        Entre le code partagé dans le groupe pour débloquer les rituels du jour.
+        L'admin partage ce code chaque matin via WhatsApp / Slack. Entre-le pour activer ta journée.
       </p>
       <div className="flex gap-2">
         <input

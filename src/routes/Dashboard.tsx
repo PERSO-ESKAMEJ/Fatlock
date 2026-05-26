@@ -21,8 +21,8 @@ export default function Dashboard() {
   const checkinDue = state === 'active' && !bodyComps.some((c) => c.weekNumber === currentWeek);
 
   const greeting = profile.sex === 'M'
-    ? `Prêt à dominer, ${profile.name} ?`
-    : `Prête à te révéler, ${profile.name} ?`;
+    ? `Ton ego forge sa légende, ${profile.name}.`
+    : `Révèle ce que tu vaux, ${profile.name}.`;
 
   // ── PENDING: challenge hasn't started yet ─────────────────────────────────
   if (state === 'pending') {
@@ -31,10 +31,10 @@ export default function Dashboard() {
       <PageWrapper>
         <div className="mb-5">
           <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">
-            Challenge à venir
+            L'ego forge ses armes
           </div>
           <h1 className="font-display text-2xl uppercase tracking-wider text-[var(--ink)]">
-            {profile.name} — Prépare-toi
+            {profile.name} — Le compte à rebours a commencé
           </h1>
         </div>
 
@@ -65,7 +65,7 @@ export default function Dashboard() {
               Mesures de départ — S0
             </div>
             <div className="text-sm text-[var(--muted)]">
-              {s0Done ? 'Mesures enregistrées ✓ — tu peux les modifier' : 'Photos + composition · À faire avant le J1'}
+              {s0Done ? 'Point de départ enregistré ✓ — modifiable avant le J1' : 'Capture ton point de départ · L\'IA comparera ta transformation finale'}
             </div>
           </div>
           <span className="text-2xl flex-shrink-0">{s0Done ? '✅' : '📏'}</span>
@@ -92,7 +92,7 @@ export default function Dashboard() {
 
         <div className="p-3 rounded-lg text-xs text-center text-[var(--muted)]"
           style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}>
-          La saisie des rituels quotidiens sera débloquée dès le J1 du challenge.
+          Les rituels s'activent au J1. Utilise ce temps pour enregistrer tes mesures de départ S0.
         </div>
       </PageWrapper>
     );
@@ -104,7 +104,7 @@ export default function Dashboard() {
       <PageWrapper>
         <div className="mb-5">
           <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--gold, #FFD700)' }}>
-            Challenge terminé
+            Le verdict est tombé
           </div>
           <h1 className="font-display text-2xl uppercase tracking-wider text-[var(--ink)]">
             {durationWeeks} semaines · {challenge.groupName}
@@ -122,7 +122,7 @@ export default function Dashboard() {
               Vote final
             </div>
             <div className="text-sm text-[var(--muted)]">
-              Compare les transformations S0 → S{durationWeeks} et vote pour la plus marquante
+              Compare les transformations S0 → S{durationWeeks}. Vote pour celui qui a le plus manifesté son ego.
             </div>
           </div>
           <span className="text-2xl flex-shrink-0">🏆</span>
@@ -182,8 +182,8 @@ export default function Dashboard() {
             ⚠ Arrivée en S{currentWeek} — départ manquant
           </div>
           <p className="text-xs leading-relaxed">
-            Tu as rejoint le challenge en cours. Les {currentWeek - 1} semaine{currentWeek - 1 > 1 ? 's' : ''} précédente{currentWeek - 1 > 1 ? 's' : ''} ne peuvent pas être récupérées — ton score sera impacté par rapport aux membres présents depuis le J1.
-            Enregistre tes mesures S0 dès maintenant pour pouvoir participer au vote final.
+            Tu arrives en S{currentWeek}. Les {currentWeek - 1} semaine{currentWeek - 1 > 1 ? 's' : ''} précédente{currentWeek - 1 > 1 ? 's' : ''} ne peuvent pas être récupérées — ton score de départ est handicapé. Rattrape-les.
+            Enregistre tes mesures S0 immédiatement pour participer au vote final.
           </p>
         </div>
       )}
@@ -231,7 +231,7 @@ export default function Dashboard() {
             <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--blue-bright)' }}>
               Check-in Semaine {currentWeek}
             </div>
-            <div className="text-sm text-[var(--muted)]">Photos · Composition corporelle · Analyse IA</div>
+            <div className="text-sm text-[var(--muted)]">Pèse-toi · Documente ta transformation · L'IA t'évalue</div>
           </div>
           <span className="text-2xl flex-shrink-0">📸</span>
         </div>

@@ -42,9 +42,10 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[var(--muted)] panel2 p-3 rounded-lg">
-        📍 Disponible sur les balances InBody/Tanita de Basic-Fit, Fitness Park, etc. — à faire avant ta séance.
-      </p>
+      <div className="text-xs panel2 p-3 rounded-lg space-y-1" style={{ color: 'var(--muted)' }}>
+        <div>📍 <span className="text-[var(--ink)]">Balance impédancemètre</span> (InBody, Tanita) — Basic-Fit, Fitness Park, iFit, centres de santé.</div>
+        <div>⏰ À faire le matin, avant ta séance, à jeun pour des mesures cohérentes d'une semaine à l'autre.</div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -55,7 +56,7 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
             placeholder="80.0"
           />
           {weightDelta && (
-            <div className={`text-xs mt-1 ${parseFloat(weightDelta) < 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+            <div className={`text-xs mt-1 font-bold ${parseFloat(weightDelta) < 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
               {parseFloat(weightDelta) > 0 ? '+' : ''}{weightDelta} kg vs S{weekNumber - 1}
             </div>
           )}
@@ -68,6 +69,7 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
             value={muscle} onChange={(e) => setMuscle(e.target.value)}
             placeholder="35.0"
           />
+          <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>Typique : 30–50 kg</div>
         </div>
 
         <div>
@@ -78,7 +80,9 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
             placeholder="15.0"
           />
           {fatPct && (
-            <div className="text-xs text-[var(--muted)] mt-1">→ {fatPct}% de masse grasse</div>
+            <div className="text-xs mt-1 font-bold" style={{ color: parseFloat(fatPct) > 25 ? 'var(--gold)' : 'var(--green)' }}>
+              → {fatPct}% MG
+            </div>
           )}
         </div>
 
@@ -89,6 +93,7 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
             value={water} onChange={(e) => setWater(e.target.value)}
             placeholder="55.0"
           />
+          <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>Typique : 55–65%</div>
         </div>
 
         <div>
@@ -98,11 +103,12 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
             value={bone} onChange={(e) => setBone(e.target.value)}
             placeholder="2.5"
           />
+          <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>Typique : 2.5–3.5 kg</div>
         </div>
       </div>
 
       <Button onClick={handleSave} disabled={!isValid} className="w-full">
-        Enregistrer la composition
+        Valider la composition →
       </Button>
     </div>
   );

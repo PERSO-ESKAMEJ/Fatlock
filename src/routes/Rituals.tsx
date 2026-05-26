@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useChallengeStore, getChallengeState } from '../store/useChallengeStore';
@@ -30,6 +31,7 @@ export default function Rituals() {
   const { upsertDailyLog, getDailyLog } = useLogStore();
   const { isCodeConfirmed } = useChallengeStore();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const today = getTodayStr();
   const yesterday = getYesterdayStr();
@@ -175,10 +177,21 @@ export default function Rituals() {
       </div>
 
       {!unlocked ? (
-        <div className="panel p-4 text-center" style={{ borderColor: 'var(--red)' }}>
+        <div className="panel p-4 text-center" style={{ borderColor: 'var(--blue)' }}>
           <div className="text-2xl mb-2">🔐</div>
           <div className="font-bold text-[var(--ink)] mb-1">Rituels verrouillés</div>
-          <p className="text-sm text-[var(--muted)]">Confirme le code du jour sur le Dashboard pour débloquer.</p>
+          <p className="text-sm text-[var(--muted)] mb-4">
+            Entre le code du jour sur le Dashboard pour activer ta journée.
+            <br />
+            <span className="text-xs">L'admin partage ce code via WhatsApp / Slack chaque matin.</span>
+          </p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={{ background: 'var(--blue)', color: 'white' }}
+          >
+            → Aller au Dashboard
+          </button>
         </div>
       ) : (
         <>
