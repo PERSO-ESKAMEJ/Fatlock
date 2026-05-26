@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
@@ -11,6 +11,7 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { getDailyCode, getTodayStr } from '../lib/dailyCode';
 import { clearAllPhotos, clearUserPhotos } from '../lib/db';
+import { supabase } from '../lib/supabase';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -43,8 +44,27 @@ export default function Settings() {
   const [showResetAll, setShowResetAll] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<Record<string, unknown> | null>(null);
+  const [members, setMembers] = useState<{ user_id: string; user_name: string; joined_at: string }[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  useEffect(() => {
+    if (profile?.isAdmin) fetchMembers();
+  }, []);
 
   if (!profile || !challenge) return null;
+
+  async function fetchMembers() {
+    const sb = supabase();
+    if (!sb) return;
+    setLoadingMembers(true);
+    const { data } = await sb
+      .from('group_members')
+      .select('user_id, user_name, joined_at')
+      .eq('challenge_id', challenge!.id)
+      .order('joined_at');
+    setMembers(data ?? []);
+    setLoadingMembers(false);
+  }
 
   const todayCode = getDailyCode(challenge.groupSecret, getTodayStr());
 
@@ -331,6 +351,40 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* Membres du groupe (admin only) */}
+      {profile.isAdmin && (
+        <div className="panel p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Membres inscrits</div>
+            <button
+              onClick={fetchMembers}
+              disabled={loadingMembers}
+              className="text-xs px-2 py-1 rounded transition-all"
+              style={{ background: 'var(--panel2)', color: 'var(--muted)', border: '1px solid var(--border)', opacity: loadingMembers ? 0.5 : 1 }}
+            >
+              {loadingMembers ? '…' : '↻ Rafraîchir'}
+            </button>
+          </div>
+          {!supabase() ? (
+            <p className="text-xs text-[var(--muted2)]">Configure Supabase ci-dessous pour voir les membres.</p>
+          ) : members.length === 0 ? (
+            <p className="text-xs text-[var(--muted2)]">{loadingMembers ? 'Chargement…' : 'Aucun membre inscrit pour l\'instant.'}</p>
+          ) : (
+            <div className="space-y-2">
+              {members.map((m) => (
+                <div key={m.user_id} className="flex items-center justify-between panel2 px-3 py-2 rounded-lg">
+                  <span className="text-sm font-bold text-[var(--ink)]">{m.user_name}</span>
+                  <span className="text-xs text-[var(--muted)]">
+                    {new Date(m.joined_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+              <p className="text-xs text-[var(--muted2)] pt-1">{members.length} participant{members.length > 1 ? 's' : ''} · Toi non inclus</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* API Key (admin only) */}
       {profile.isAdmin && (

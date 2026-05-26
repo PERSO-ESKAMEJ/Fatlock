@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { calculateTargets, ACTIVITY_LEVELS } from '../lib/nutrition';
+import { registerGroupMember } from '../lib/supabase';
 import {
   UserProfile, ChallengeConfig, Sex, Intensity, DayType,
   ChallengeType, CustomRitual, CustomChallengeSettings,
@@ -191,6 +192,12 @@ export default function Welcome() {
     };
 
     addEntry(newProfile, challenge);
+
+    if (mode === 'join' && sbUrlParam && sbKeyParam) {
+      registerGroupMember(sbUrlParam, sbKeyParam, challenge.id, profileId, newProfile.name)
+        .catch(() => undefined);
+    }
+
     navigate('/dashboard');
   }
 
