@@ -130,7 +130,7 @@ export default function AdminSync() {
           regularityPercent: weekScore?.regularityScore ?? 0,
           transformationPercent: weekScore?.transformationScore ?? 0,
           compositeScore: composite,
-          currentStreak: calcCurrentStreak(rLogs, rProfile.intensity),
+          currentStreak: calcCurrentStreak(rLogs, rProfile.intensity, challenge.customSettings?.rituals),
           weeklyCredibilityScore: undefined,
         });
       }
@@ -202,6 +202,7 @@ export default function AdminSync() {
             photo: photos,
             prevPhoto: prevPhotos,
             apiKey: challenge.anthropicApiKey,
+            durationWeeks,
           });
           addAIResult(result);
           collectedAiResults.push(result);

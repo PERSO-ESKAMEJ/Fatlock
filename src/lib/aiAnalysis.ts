@@ -8,6 +8,7 @@ interface AIAnalysisParams {
   photo: WeeklyPhoto;
   prevPhoto?: WeeklyPhoto;
   apiKey: string;
+  durationWeeks?: number;
 }
 
 function parseBase64(dataUrl: string): { mediaType: string; data: string } {
@@ -24,7 +25,8 @@ function buildPrompt(
   weekNumber: number,
   currCompo: BodyComposition,
   prevCompo: BodyComposition | null,
-  hasPrevPhoto: boolean
+  hasPrevPhoto: boolean,
+  durationWeeks = 8
 ): string {
   const mgPct = ((currCompo.fatMassKg / currCompo.weightKg) * 100).toFixed(1);
   const eauPct = currCompo.waterPercent?.toFixed(0) ?? 'N/A';
@@ -35,7 +37,7 @@ function buildPrompt(
     const dMG     = prevCompo ? fmt(currCompo.fatMassKg   - prevCompo.fatMassKg)   : 'N/A';
     const dMM     = prevCompo ? fmt(currCompo.muscleMassKg - prevCompo.muscleMassKg) : 'N/A';
 
-    return `Tu es un juge d'intégrité pour un challenge de transformation physique sur 8 semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne ou claim physiologiquement impossible.
+    return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne ou claim physiologiquement impossible.
 
 CONTEXTE PHOTO
 Tu reçois 1 seule photo : celle de la Semaine 1. Aucune photo antérieure n'est disponible. Tu ne peux donc PAS évaluer une évolution visuelle — n'invente aucune progression.
@@ -87,7 +89,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
     const dMG     = prevCompo ? fmt(currCompo.fatMassKg    - prevCompo.fatMassKg)    : 'N/A';
     const dMM     = prevCompo ? fmt(currCompo.muscleMassKg - prevCompo.muscleMassKg) : 'N/A';
 
-    return `Tu es un juge d'intégrité pour un challenge de transformation physique sur 8 semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
+    return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
 ORDRE DES PHOTOS — IMPORTANT
 Tu reçois 2 photos dans cet ordre exact :
@@ -147,7 +149,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
   const dMM     = fmt(currCompo.muscleMassKg - prevCompo!.muscleMassKg);
   const maxMGLoss = (currCompo.weightKg * 0.01).toFixed(2);
 
-  return `Tu es un juge d'intégrité pour un challenge de transformation physique sur 8 semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
+  return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
 ORDRE DES PHOTOS — IMPORTANT
 ${hasPrevPhoto
@@ -210,6 +212,7 @@ interface FinalAIParams {
   s0Photo: WeeklyPhoto;
   s8Photo: WeeklyPhoto;
   apiKey: string;
+  durationWeeks?: number;
 }
 
 interface FinalAIRawResult {
@@ -217,8 +220,8 @@ interface FinalAIRawResult {
   analysis: string;
 }
 
-function buildFinalPrompt(): string {
-  return `Tu es un juge visuel pour un challenge de transformation physique sur 8 semaines.
+function buildFinalPrompt(durationWeeks = 8): string {
+  return `Tu es un juge visuel pour un challenge de transformation physique sur ${durationWeeks} semaines.
 
 ORDRE DES PHOTOS — IMPORTANT
 Tu reçois entre 2 et 4 photos dans cet ordre exact :
@@ -257,7 +260,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 }
 
 export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAIRawResult> {
-  const { s0Photo, s8Photo, apiKey } = params;
+  const { s0Photo, s8Photo, apiKey, durationWeeks = 8 } = params;
 
   const images: object[] = [];
   // S0 d'abord
@@ -289,7 +292,7 @@ export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAI
       temperature: 0,
       messages: [{
         role: 'user',
-        content: [...images, { type: 'text', text: buildFinalPrompt() }],
+        content: [...images, { type: 'text', text: buildFinalPrompt(durationWeeks) }],
       }],
     }),
   });
@@ -319,10 +322,10 @@ export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAI
 }
 
 export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
-  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey } = params;
+  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8 } = params;
 
   const hasPrevPhoto = !!prevPhoto;
-  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto);
+  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks);
 
   // Photos : prev (AVANT) d'abord, puis current (APRÈS)
   const images: object[] = [];

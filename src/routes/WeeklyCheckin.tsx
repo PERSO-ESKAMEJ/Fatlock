@@ -86,7 +86,8 @@ export default function WeeklyCheckin() {
           savedComp,
           null,
           7,
-          customRituals
+          customRituals,
+          durationWeeks
         );
         addWeeklyScore(score);
       }

@@ -120,18 +120,19 @@ export function calcAIBonus(credibilityScore: number | null, intensity: Intensit
 
 export function calcTransformationScore(
   startCompo: BodyComposition | null,
-  currentCompo: BodyComposition | null
+  currentCompo: BodyComposition | null,
+  durationWeeks = 8
 ): number {
   if (!startCompo || !currentCompo) return 0;
   const fatLostKg = startCompo.fatMassKg - currentCompo.fatMassKg;
   const muscleGainedKg = currentCompo.muscleMassKg - startCompo.muscleMassKg;
 
-  // Caps physiologiques sur 8 semaines :
-  // graisse : max ~1 % du poids/semaine × 8 × 1,5 (marge balance impédance) ≈ 12 % du poids de départ
-  // muscle  : max ~1,5 kg en 8 semaines même dans des conditions idéales
-  const fatCapKg = startCompo.weightKg * 0.12;
+  // Caps physiologiques proportionnels à la durée :
+  // graisse : max ~1 % du poids/semaine × durationWeeks
+  // muscle  : max ~0.1875 kg/semaine × durationWeeks (~1.5 kg sur 8 semaines)
+  const fatCapKg = startCompo.weightKg * 0.015 * durationWeeks;
   const fatLostCapped = Math.min(Math.max(0, fatLostKg), fatCapKg);
-  const muscleGainedCapped = Math.min(Math.max(0, muscleGainedKg), 1.5);
+  const muscleGainedCapped = Math.min(Math.max(0, muscleGainedKg), 0.1875 * durationWeeks);
 
   // 10 pts par 500 g de graisse perdue, 15 pts par 500 g de muscle gagné
   const fatScore = Math.round((fatLostCapped / 0.5) * 10);
@@ -197,7 +198,8 @@ export function buildWeeklyScore(
   currentCompo: BodyComposition | null,
   credibilityScore: number | null,
   totalDays: number,
-  customRituals?: CustomRitual[]
+  customRituals?: CustomRitual[],
+  durationWeeks = 8
 ): WeeklyScore {
   const egoPoints = logs.reduce(
     (sum, log) => sum + calcDayRitualPoints(log, intensity, customRituals),
@@ -205,7 +207,7 @@ export function buildWeeklyScore(
   );
   const streakBonus = calcCurrentStreak(logs, intensity, customRituals) * 5;
   const aiBonus = calcAIBonus(credibilityScore, intensity);
-  const transformationScore = calcTransformationScore(startCompo, currentCompo);
+  const transformationScore = calcTransformationScore(startCompo, currentCompo, durationWeeks);
   const regularityScore = calcRegularityScore(logs, totalDays);
   const totalComposite = calcCompositeScore(
     egoPoints + streakBonus + aiBonus,

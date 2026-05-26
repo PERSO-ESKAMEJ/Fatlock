@@ -67,7 +67,7 @@ export default function Progress() {
     );
   }
 
-  const targets = calculateTargets(profile, profile.startWeight);
+  const targets = calculateTargets(profile, profile.startWeight, durationWeeks);
 
   // Weight chart
   const weightData = [

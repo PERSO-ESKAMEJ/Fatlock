@@ -5,12 +5,14 @@ import { useNavigate } from 'react-router-dom';
 
 export default function NutritionSnapshot() {
   const profile = useProfileStore((s) => s.profile)!;
+  const challenge = useProfileStore((s) => s.challenge)!;
   const getLatest = useLogStore((s) => s.getLatestBodyComp);
   const latest = getLatest(profile.id);
   const navigate = useNavigate();
 
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const weight = latest?.weightKg ?? profile.startWeight;
-  const targets = calculateTargets(profile, weight);
+  const targets = calculateTargets(profile, weight, durationWeeks);
 
   const macros = [
     { label: 'Protéines', g: targets.protein, kcal: targets.protein * 4, color: 'var(--blue-bright)' },

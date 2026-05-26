@@ -248,7 +248,7 @@ export default function FinalVote() {
           getWeeklyPhoto(card.userId, durationWeeks),
         ]);
         if (s0 && s8) {
-          const result = await runFinalAIAnalysis({ userId: card.userId, s0Photo: s0, s8Photo: s8, apiKey });
+          const result = await runFinalAIAnalysis({ userId: card.userId, s0Photo: s0, s8Photo: s8, apiKey, durationWeeks });
           const avgCred = pkg.weeklyCredibilityAvgs[card.userId] ?? 50;
           const adjustedScore = Math.round(result.transformationScore * credibilityFactor(avgCred));
           verdicts.push({
