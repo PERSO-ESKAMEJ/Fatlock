@@ -23,7 +23,7 @@ const DAY_TYPES: { value: DayType | ''; label: string }[] = [
 ];
 
 export default function Settings() {
-  const { profile, challenge, entries, activeId, switchEntry, updateProfile, updateChallenge, reset: resetProfile } = useProfileStore();
+  const { profile, challenge, entries, activeId, switchEntry, updateProfile, updateChallenge, reset: resetProfile, resetAll } = useProfileStore();
   const { removeUserData, reset: resetLogs } = useLogStore();
   const { reset: resetChallenge } = useChallengeStore();
   const { reset: resetLeaderboard } = useLeaderboardStore();
@@ -39,6 +39,7 @@ export default function Settings() {
     friday: null, saturday: null, sunday: null,
   });
   const [showReset, setShowReset] = useState(false);
+  const [showResetAll, setShowResetAll] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<Record<string, unknown> | null>(null);
 
@@ -163,6 +164,14 @@ export default function Settings() {
     setShowRestoreConfirm(false);
     setPendingRestore(null);
     setTimeout(() => window.location.reload(), 1200);
+  }
+
+  function handleResetAll() {
+    resetAll();
+    resetLogs();
+    resetChallenge();
+    resetLeaderboard();
+    navigate('/');
   }
 
   function handleReset() {
@@ -377,8 +386,11 @@ export default function Settings() {
         <p className="text-xs text-[var(--muted)] mb-3">
           Supprime les données de ce groupe sur cet appareil. Tes autres groupes ne sont pas affectés.
         </p>
-        <Button variant="danger" className="w-full" onClick={() => setShowReset(true)}>
+        <Button variant="danger" className="w-full mb-2" onClick={() => setShowReset(true)}>
           Supprimer ce groupe
+        </Button>
+        <Button variant="danger" className="w-full opacity-70" onClick={() => setShowResetAll(true)}>
+          Tout supprimer — tous les groupes
         </Button>
       </div>
 
@@ -392,6 +404,16 @@ export default function Settings() {
         <div className="flex gap-3">
           <Button variant="ghost" className="flex-1" onClick={() => setShowReset(false)}>Annuler</Button>
           <Button variant="danger" className="flex-1" onClick={handleReset}>Supprimer définitivement</Button>
+        </div>
+      </Modal>
+
+      <Modal open={showResetAll} onClose={() => setShowResetAll(false)} title="Tout supprimer ?">
+        <p className="text-sm text-[var(--muted)] mb-4">
+          Tous tes groupes et l'intégralité de tes données locales seront effacés définitivement — logs, pesées, photos, scores, paramètres.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="ghost" className="flex-1" onClick={() => setShowResetAll(false)}>Annuler</Button>
+          <Button variant="danger" className="flex-1" onClick={handleResetAll}>Tout supprimer</Button>
         </div>
       </Modal>
 
