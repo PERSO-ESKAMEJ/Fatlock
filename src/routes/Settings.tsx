@@ -24,7 +24,7 @@ const DAY_TYPES: { value: DayType | ''; label: string }[] = [
 
 export default function Settings() {
   const { profile, challenge, entries, activeId, switchEntry, updateProfile, updateChallenge, reset: resetProfile } = useProfileStore();
-  const { reset: resetLogs } = useLogStore();
+  const { removeUserData, reset: resetLogs } = useLogStore();
   const { reset: resetChallenge } = useChallengeStore();
   const { reset: resetLeaderboard } = useLeaderboardStore();
   const { showToast } = useToast();
@@ -166,10 +166,15 @@ export default function Settings() {
   }
 
   function handleReset() {
+    const userId = profile.id;
+    const isLastEntry = entries.length <= 1;
     resetProfile();
-    resetLogs();
-    resetChallenge();
-    resetLeaderboard();
+    removeUserData(userId);
+    if (isLastEntry) {
+      resetLogs();
+      resetChallenge();
+      resetLeaderboard();
+    }
     navigate('/');
   }
 
@@ -370,7 +375,7 @@ export default function Settings() {
           Zone Danger
         </div>
         <p className="text-xs text-[var(--muted)] mb-3">
-          Supprime toutes les données de ce groupe sur cet appareil. Irréversible.
+          Supprime les données de ce groupe sur cet appareil. Tes autres groupes ne sont pas affectés.
         </p>
         <Button variant="danger" className="w-full" onClick={() => setShowReset(true)}>
           Supprimer ce groupe
@@ -382,7 +387,7 @@ export default function Settings() {
           Groupe : <span className="font-bold text-[var(--ink)]">{challenge.groupName}</span>
         </p>
         <p className="text-sm text-[var(--muted)] mb-4">
-          Toutes tes données locales pour ce groupe seront effacées définitivement — logs, pesées, photos, scores.
+          Logs, pesées, photos et scores pour <span className="font-bold text-[var(--ink)]">{challenge.groupName}</span> seront supprimés de cet appareil.{entries.length > 1 ? ' Tes autres groupes ne sont pas affectés.' : ' C\'est ton seul groupe — tout sera effacé.'}
         </p>
         <div className="flex gap-3">
           <Button variant="ghost" className="flex-1" onClick={() => setShowReset(false)}>Annuler</Button>

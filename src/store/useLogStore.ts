@@ -15,6 +15,7 @@ interface LogStore {
   addWeeklyScore: (score: WeeklyScore) => void;
   addAIResult: (result: AIAnalysisResult) => void;
   getAIResult: (userId: string, week: number) => AIAnalysisResult | undefined;
+  removeUserData: (userId: string) => void;
   reset: () => void;
 }
 
@@ -90,6 +91,14 @@ export const useLogStore = create<LogStore>()(
 
       getAIResult: (userId, week) =>
         get().aiResults.find((r) => r.userId === userId && r.weekNumber === week),
+
+      removeUserData: (userId) =>
+        set((s) => ({
+          dailyLogs: s.dailyLogs.filter((l) => l.userId !== userId),
+          bodyCompositions: s.bodyCompositions.filter((c) => c.userId !== userId),
+          weeklyScores: s.weeklyScores.filter((ws) => ws.userId !== userId),
+          aiResults: s.aiResults.filter((r) => r.userId !== userId),
+        })),
 
       reset: () =>
         set({ dailyLogs: [], bodyCompositions: [], weeklyScores: [], aiResults: [] }),
