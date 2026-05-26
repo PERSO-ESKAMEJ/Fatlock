@@ -94,26 +94,28 @@ export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, custom
 
 export function calcAIBonus(credibilityScore: number | null, intensity: Intensity = 'standard'): number {
   if (credibilityScore === null) return 0;
+  // Score IA = signal secondaire, pas facteur déterminant
+  // Malus significatif uniquement pour triche flagrante (<40), bonus modéré pour crédibilité élevée
   if (intensity === 'flow') {
-    if (credibilityScore >= 90) return 50;
-    if (credibilityScore >= 75) return 35;
-    if (credibilityScore >= 60) return 20;
-    if (credibilityScore >= 40) return -30;
-    return -60;
-  }
-  if (intensity === 'standard') {
-    if (credibilityScore >= 90) return 50;
-    if (credibilityScore >= 75) return 30;
-    if (credibilityScore >= 60) return 15;
-    if (credibilityScore >= 40) return -15;
+    if (credibilityScore >= 85) return 20;
+    if (credibilityScore >= 65) return 10;
+    if (credibilityScore >= 45) return 0;
+    if (credibilityScore >= 25) return -20;
     return -35;
   }
+  if (intensity === 'standard') {
+    if (credibilityScore >= 85) return 15;
+    if (credibilityScore >= 65) return 8;
+    if (credibilityScore >= 45) return 0;
+    if (credibilityScore >= 25) return -15;
+    return -25;
+  }
   // safe
-  if (credibilityScore >= 90) return 50;
-  if (credibilityScore >= 75) return 25;
-  if (credibilityScore >= 60) return 10;
-  if (credibilityScore >= 40) return -10;
-  return -20;
+  if (credibilityScore >= 85) return 10;
+  if (credibilityScore >= 65) return 5;
+  if (credibilityScore >= 45) return 0;
+  if (credibilityScore >= 25) return -10;
+  return -15;
 }
 
 export function calcTransformationScore(

@@ -193,6 +193,49 @@ export default function Leaderboard() {
                   </button>
                 </div>
               )}
+
+              {/* Mur de la honte — visible si au moins un score IA existe */}
+              {entries.some((e) => e.weeklyCredibilityScore != null) && (
+                <div className="mt-6">
+                  <div className="text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--red)' }}>
+                    <span>⚠</span>
+                    <span>Crédibilité IA — Semaine {masterLeaderboard?.weekNumber}</span>
+                    <span className="text-[var(--muted2)] font-normal normal-case tracking-normal">· signal indicatif</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[...entries]
+                      .filter((e) => e.weeklyCredibilityScore != null)
+                      .sort((a, b) => (a.weeklyCredibilityScore ?? 0) - (b.weeklyCredibilityScore ?? 0))
+                      .map((entry) => {
+                        const score = entry.weeklyCredibilityScore!;
+                        const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--gold)' : 'var(--red)';
+                        const label = score >= 75 ? 'Crédible' : score >= 50 ? 'Douteux' : 'Suspect';
+                        return (
+                          <div key={entry.userId} className="panel2 p-3 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                              style={{ background: `${color}22`, border: `1px solid ${color}`, color }}>
+                              {score}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-bold ${entry.userId === profile.id ? 'text-[var(--blue-bright)]' : 'text-[var(--ink)]'}`}>
+                                  {entry.name}{entry.userId === profile.id && <span className="text-xs text-[var(--muted)] ml-1">(toi)</span>}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color }}>{label}</span>
+                              </div>
+                              <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                                <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, background: color }} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  <p className="text-xs text-[var(--muted2)] mt-2">
+                    Classé du plus suspect au plus crédible. Impact limité sur le score final.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
