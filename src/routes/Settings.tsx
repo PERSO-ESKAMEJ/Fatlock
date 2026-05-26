@@ -4,7 +4,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useChallengeStore } from '../store/useChallengeStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { DayType } from '../types';
+import { DayType, UserProfile, ChallengeConfig } from '../types';
 import PageWrapper from '../components/layout/PageWrapper';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -39,6 +39,8 @@ export default function Settings() {
     friday: null, saturday: null, sunday: null,
   });
   const [showReset, setShowReset] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [pendingRestore, setPendingRestore] = useState<Record<string, unknown> | null>(null);
 
   if (!profile || !challenge) return null;
 
@@ -67,17 +69,100 @@ export default function Settings() {
     showToast('Supabase configuré', 'success');
   }
 
-  function handleExportData() {
-    const { dailyLogs, bodyCompositions, weeklyScores, aiResults } = useLogStore.getState();
-    const data = { profile, challenge, dailyLogs, bodyCompositions, weeklyScores, aiResults };
+  function handleFullBackup() {
+    const logState = useLogStore.getState();
+    const challengeState = useChallengeStore.getState();
+    const { masterLeaderboard } = useLeaderboardStore.getState();
+    const data = {
+      _version: 1,
+      _exportedAt: new Date().toISOString(),
+      _note: 'Les photos ne sont pas incluses dans ce backup (stockage local uniquement). Exportez-les manuellement si nécessaire.',
+      profile,
+      challenge,
+      logs: {
+        dailyLogs: logState.dailyLogs,
+        bodyCompositions: logState.bodyCompositions,
+        weeklyScores: logState.weeklyScores,
+        aiResults: logState.aiResults,
+      },
+      challengeStore: {
+        codeConfirmedDates: challengeState.codeConfirmedDates,
+      },
+      masterLeaderboard,
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fatlock-backup-${profile?.name.toLowerCase()}-${getTodayStr()}.json`;
+    a.download = `fatlock-backup-${profile!.name.toLowerCase().replace(/\s+/g, '-')}-${getTodayStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Données exportées', 'success');
+    showToast('Backup complet exporté', 'success');
+  }
+
+  function handleRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (!parsed.profile || !parsed.challenge || !parsed.logs) {
+          showToast('Fichier invalide', 'error');
+          return;
+        }
+        setPendingRestore(parsed);
+        setShowRestoreConfirm(true);
+      } catch {
+        showToast('Fichier JSON invalide', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  function handleConfirmRestore() {
+    if (!pendingRestore) return;
+    const { profile: p, challenge: c, logs, challengeStore, masterLeaderboard } = pendingRestore as Record<string, unknown>;
+
+    const profileStore = useProfileStore.getState();
+    profileStore.reset();
+    const restoredProfile = p as UserProfile;
+    const restoredChallenge = c as ChallengeConfig;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useProfileStore as any).setState((s: typeof profileStore) => {
+      const newEntry = { profile: restoredProfile, challenge: restoredChallenge };
+      const existingIdx = s.entries.findIndex((e) => e.profile.id === restoredProfile.id);
+      const entries = existingIdx >= 0
+        ? s.entries.map((e, i) => i === existingIdx ? newEntry : e)
+        : [...s.entries, newEntry];
+      return { entries, activeId: restoredProfile.id, profile: restoredProfile, challenge: restoredChallenge };
+    });
+
+    const logTyped = logs as Record<string, unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (useLogStore as any).setState({
+      dailyLogs: logTyped.dailyLogs ?? [],
+      bodyCompositions: logTyped.bodyCompositions ?? [],
+      weeklyScores: logTyped.weeklyScores ?? [],
+      aiResults: logTyped.aiResults ?? [],
+    });
+
+    if (challengeStore) {
+      const csTyped = challengeStore as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (useChallengeStore as any).setState({ codeConfirmedDates: csTyped.codeConfirmedDates ?? [] });
+    }
+
+    if (masterLeaderboard) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      useLeaderboardStore.getState().setMasterLeaderboard(masterLeaderboard as any);
+    }
+
+    showToast('Données restaurées — rechargement…', 'success');
+    setShowRestoreConfirm(false);
+    setPendingRestore(null);
+    setTimeout(() => window.location.reload(), 1200);
   }
 
   function handleReset() {
@@ -177,7 +262,7 @@ export default function Settings() {
             style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
             onClick={() => {
               const base = window.location.origin + import.meta.env.BASE_URL;
-              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}&cid=${challenge.id}`;
+              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}&cid=${challenge.id}&sd=${challenge.startDate}&dw=${challenge.durationWeeks ?? 8}&stake=${challenge.stakeAmount}&aid=${challenge.adminId}`;
               if (challenge.supabaseUrl) link += `&sb_url=${encodeURIComponent(challenge.supabaseUrl)}`;
               if (challenge.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(challenge.supabaseAnonKey)}`;
               navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));
@@ -261,12 +346,22 @@ export default function Settings() {
         </Button>
       </div>
 
-      {/* Export */}
+      {/* Backup / Restore */}
       <div className="panel p-4 mb-4">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Export des données</div>
-        <Button variant="ghost" className="w-full" onClick={handleExportData}>
-          Exporter toutes mes données JSON
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Sauvegarde & Restauration</div>
+        <p className="text-xs text-[var(--muted2)] mb-3">
+          Le backup inclut profil, challenge, logs, classement et rituels confirmés. Les photos (IndexedDB) ne sont pas incluses.
+        </p>
+        <Button variant="ghost" className="w-full mb-2" onClick={handleFullBackup}>
+          Exporter le backup complet
         </Button>
+        <label
+          className="block w-full text-center text-sm font-medium py-2 px-4 rounded-lg cursor-pointer transition-all hover:opacity-80"
+          style={{ background: 'var(--panel2)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+        >
+          Restaurer depuis un backup
+          <input type="file" accept=".json" className="hidden" onChange={handleRestoreFile} />
+        </label>
       </div>
 
       {/* Danger zone */}
@@ -292,6 +387,19 @@ export default function Settings() {
         <div className="flex gap-3">
           <Button variant="ghost" className="flex-1" onClick={() => setShowReset(false)}>Annuler</Button>
           <Button variant="danger" className="flex-1" onClick={handleReset}>Confirmer</Button>
+        </div>
+      </Modal>
+
+      <Modal open={showRestoreConfirm} onClose={() => { setShowRestoreConfirm(false); setPendingRestore(null); }} title="Restaurer ce backup ?">
+        <p className="text-sm text-[var(--muted)] mb-2">
+          Les données actuelles du profil <span className="font-bold text-[var(--ink)]">{profile.name}</span> seront écrasées par le backup.
+        </p>
+        <p className="text-xs text-[var(--muted2)] mb-4">
+          L'app rechargera automatiquement après la restauration.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="ghost" className="flex-1" onClick={() => { setShowRestoreConfirm(false); setPendingRestore(null); }}>Annuler</Button>
+          <Button variant="danger" className="flex-1" onClick={handleConfirmRestore}>Restaurer</Button>
         </div>
       </Modal>
     </PageWrapper>

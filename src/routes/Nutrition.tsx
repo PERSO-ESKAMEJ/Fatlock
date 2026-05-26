@@ -12,6 +12,7 @@ export default function Nutrition() {
   const getLatest = useLogStore((s) => s.getLatestBodyComp);
 
   const nutritionEnabled = challenge.challengeType !== 'custom' || (challenge.customSettings?.nutritionEnabled ?? true);
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   if (!nutritionEnabled) {
     return (
       <PageWrapper title="Nutrition">
@@ -28,7 +29,7 @@ export default function Nutrition() {
 
   const latest = getLatest(profile.id);
   const currentWeight = latest?.weightKg ?? profile.startWeight;
-  const targets = calculateTargets(profile, currentWeight);
+  const targets = calculateTargets(profile, currentWeight, durationWeeks);
   const macroPercents = getMacroPercents(targets);
 
   // Build weight chart data
@@ -36,7 +37,7 @@ export default function Nutrition() {
     { label: 'S0', weight: profile.startWeight, target: profile.startWeight },
   ];
 
-  for (let w = 1; w <= 8; w++) {
+  for (let w = 1; w <= durationWeeks; w++) {
     const comp = bodyComps.find((c) => c.weekNumber === w);
     const targetW = +(profile.startWeight - targets.weeklyLossKg * w).toFixed(1);
     weightPoints.push({
@@ -106,11 +107,11 @@ export default function Nutrition() {
           <div className="text-2xl text-[var(--muted)]">→</div>
           <div className="text-right">
             <div className="text-xs text-[var(--muted)]">Poids S8 projeté</div>
-            <div className="font-mono text-xl font-bold" style={{ color: 'var(--green)' }}>{targets.projectedWeightAt8Weeks} kg</div>
+            <div className="font-mono text-xl font-bold" style={{ color: 'var(--green)' }}>{targets.projectedWeight} kg</div>
           </div>
         </div>
         <div className="mt-2 text-xs text-[var(--muted)] text-center">
-          Perte cible : {targets.weeklyLossKg} kg/semaine ({(targets.weeklyLossKg * 8).toFixed(1)} kg total)
+          Perte cible : {targets.weeklyLossKg} kg/semaine ({(targets.weeklyLossKg * durationWeeks).toFixed(1)} kg total)
         </div>
         {targets.safetyFloorApplied && profile.intensity === 'flow' && (
           <p className="text-xs text-[var(--muted)] mt-2 text-center">

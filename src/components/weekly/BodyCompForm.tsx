@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BodyComposition } from '../../types';
+import { getTodayStr } from '../../lib/dailyCode';
 import Button from '../ui/Button';
 
 interface BodyCompFormProps {
@@ -27,7 +28,7 @@ export default function BodyCompForm({ userId, weekNumber, previous, onSave }: B
     if (!weight || !muscle || !fat || !water || !bone) return;
     onSave({
       userId,
-      date: new Date().toISOString().slice(0, 10),
+      date: getTodayStr(),
       weekNumber,
       weightKg: parseFloat(weight),
       muscleMassKg: parseFloat(muscle),

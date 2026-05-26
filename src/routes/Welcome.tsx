@@ -46,8 +46,12 @@ export default function Welcome() {
   const joinParam = (searchParams.get('join') ?? '').toUpperCase();
   const gnameParam = decodeURIComponent(searchParams.get('gname') ?? '');
   const cidParam = searchParams.get('cid') ?? '';
+  const sdParam = searchParams.get('sd') ?? '';
+  const stakeParam = searchParams.get('stake') ?? '';
+  const aidParam = searchParams.get('aid') ?? '';
   const sbUrlParam = decodeURIComponent(searchParams.get('sb_url') ?? '');
   const sbKeyParam = decodeURIComponent(searchParams.get('sb_key') ?? '');
+  const dwParam = searchParams.get('dw') ?? '';
   const hasJoinLink = joinParam.length === 6;
 
   const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
@@ -80,8 +84,10 @@ export default function Welcome() {
   });
 
   // Challenge fields
-  const [stake, setStake] = useState('20');
+  const [durationWeeks, setDurationWeeks] = useState(dwParam ? parseInt(dwParam) : 8);
+  const [stake, setStake] = useState(stakeParam || '20');
   const [startDate, setStartDate] = useState(() => {
+    if (sdParam) return sdParam;
     const d = new Date(); d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10);
   });
@@ -148,8 +154,9 @@ export default function Welcome() {
       groupCode,
       groupSecret,
       startDate,
+      durationWeeks: challengeType === 'custom' ? (customSettings.durationWeeks ?? 8) : durationWeeks,
       stakeAmount: parseFloat(stake),
-      adminId: profileId,
+      adminId: mode === 'join' && aidParam ? aidParam : profileId,
       participantIds: [profileId],
       challengeType,
       customSettings: challengeType === 'custom' ? customSettings : undefined,
@@ -165,7 +172,7 @@ export default function Welcome() {
     ? { sex, height: parseFloat(height), age: parseInt(age), activityLevel, intensity } as UserProfile
     : null;
   const targets = tempProfile && weight
-    ? calculateTargets({ ...tempProfile, id: '', name, startWeight: parseFloat(weight), trainingDays, groupCode: '', isAdmin: false, createdAt: '' }, parseFloat(weight))
+    ? calculateTargets({ ...tempProfile, id: '', name, startWeight: parseFloat(weight), trainingDays, groupCode: '', isAdmin: false, createdAt: '' }, parseFloat(weight), durationWeeks)
     : null;
 
   if (profile && !isAdding) {
@@ -198,7 +205,7 @@ export default function Welcome() {
             FAT<span style={{ background: 'linear-gradient(to right, var(--blue), var(--cyan))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>LOCK</span>
           </h1>
           <p className="text-[var(--muted)] text-lg">Réveillez et sublimez votre Ego Abdominal</p>
-          <p className="text-xs text-[var(--muted2)] mt-2">Challenge de transformation 8 semaines — groupe — mise en jeu</p>
+          <p className="text-xs text-[var(--muted2)] mt-2">Challenge de transformation 4–24 semaines — groupe — mise en jeu</p>
           <p className="text-xs mt-3 font-bold uppercase tracking-wider" style={{ color: 'var(--red)' }}>
             L'IA analyse ta transformation chaque semaine. Les tricheurs n'ont qu'à bien se tenir.
           </p>
@@ -235,7 +242,7 @@ export default function Welcome() {
               FAT<span style={{ color: 'var(--cyan)' }}>LOCK</span>
             </div>
             <div className="text-sm text-[var(--ink)] font-bold mb-1">Transformation corporelle</div>
-            <div className="text-xs text-[var(--muted)]">Objectif perte de gras sur 8 semaines. Rituels, nutrition et suivi de composition corporelle pré-configurés.</div>
+            <div className="text-xs text-[var(--muted)]">Objectif perte de gras — durée configurable. Rituels, nutrition et suivi de composition corporelle pré-configurés.</div>
           </button>
           <button
             onClick={() => { setChallengeType('custom'); setStep('profile'); }}
@@ -417,8 +424,8 @@ export default function Welcome() {
               <span className="font-mono text-[var(--ink)]">{targets.weeklyLossKg} kg/sem</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Poids projeté S8</span>
-              <span className="font-mono text-[var(--green)]">{targets.projectedWeightAt8Weeks} kg</span>
+              <span className="text-[var(--muted)]">Poids projeté S{durationWeeks}</span>
+              <span className="font-mono text-[var(--green)]">{targets.projectedWeight} kg</span>
             </div>
           </div>
 
@@ -611,6 +618,39 @@ export default function Welcome() {
                   <p className="text-xs text-[var(--muted)] mt-1">Code récupéré depuis le lien d'invitation.</p>
                 )}
               </div>
+              {sdParam && (
+                <div>
+                  <label>Date de début</label>
+                  <div
+                    className="w-full p-3 rounded-lg font-mono text-[var(--ink)]"
+                    style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}
+                  >
+                    {new Date(sdParam + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                </div>
+              )}
+              {dwParam && (
+                <div>
+                  <label>Durée du challenge</label>
+                  <div
+                    className="w-full p-3 rounded-lg font-mono text-[var(--ink)]"
+                    style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}
+                  >
+                    {durationWeeks} semaines
+                  </div>
+                </div>
+              )}
+              {stakeParam && (
+                <div>
+                  <label>Mise en jeu</label>
+                  <div
+                    className="w-full p-3 rounded-lg font-mono text-[var(--ink)]"
+                    style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}
+                  >
+                    {stakeParam} €
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -643,8 +683,22 @@ export default function Welcome() {
                   value={startDate}
                   min={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setStartDate(e.target.value)}
+                  style={{ colorScheme: 'dark' }}
                 />
               </div>
+              {challengeType === 'fatlock' && (
+                <div>
+                  <label>Durée : <span className="font-mono font-bold text-[var(--cyan)]">{durationWeeks} semaines</span></label>
+                  <input
+                    type="range" min={4} max={24} step={1} value={durationWeeks}
+                    onChange={(e) => setDurationWeeks(parseInt(e.target.value))}
+                    className="w-full mt-1"
+                  />
+                  <div className="flex justify-between text-xs text-[var(--muted)] mt-1">
+                    <span>4 sem.</span><span>24 sem.</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

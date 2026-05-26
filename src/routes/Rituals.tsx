@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
-import { useChallengeStore } from '../store/useChallengeStore';
+import { useChallengeStore, getChallengeState } from '../store/useChallengeStore';
 import { getTodayStr } from '../lib/dailyCode';
 import { getRitualsForDay, getMaxPointsForDay } from '../constants/rituals';
 import { calcDayRitualPoints } from '../lib/scoring';
@@ -37,6 +37,9 @@ export default function Rituals() {
   const [viewingDay, setViewingDay] = useState<'today' | 'yesterday'>('today');
   const isYesterday = viewingDay === 'yesterday';
   const activeDate = isYesterday ? yesterday : today;
+
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const challengeState = getChallengeState(challenge.startDate, durationWeeks);
 
   const isCustom = challenge.challengeType === 'custom';
   const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
@@ -107,6 +110,20 @@ export default function Rituals() {
 
   const trackWeight = !isCustom || (challenge.customSettings?.trackWeight ?? true);
   const customMetricLabel = challenge.customSettings?.customMetricLabel;
+
+  if (challengeState === 'pending') {
+    return (
+      <PageWrapper>
+        <div className="panel p-8 text-center mt-8">
+          <div className="text-3xl mb-3">🔒</div>
+          <div className="font-bold text-[var(--ink)] mb-2">Challenge pas encore commencé</div>
+          <div className="text-sm text-[var(--muted)]">
+            La saisie des rituels sera disponible dès le {new Date(challenge.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+          </div>
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>

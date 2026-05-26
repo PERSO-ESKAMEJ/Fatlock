@@ -203,6 +203,121 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 {"credibilityScore": <0-100>, "analysis": "<2 à 3 phrases en français, directes et factuelles, expliquant les points retirés. Aucun jugement moral, aucun conseil.>"}`;
 }
 
+// ── Analyse IA finale S0→S8 ───────────────────────────────────────────────────
+
+interface FinalAIParams {
+  userId: string;
+  s0Photo: WeeklyPhoto;
+  s8Photo: WeeklyPhoto;
+  apiKey: string;
+}
+
+interface FinalAIRawResult {
+  transformationScore: number;
+  analysis: string;
+}
+
+function buildFinalPrompt(): string {
+  return `Tu es un juge visuel pour un challenge de transformation physique sur 8 semaines.
+
+ORDRE DES PHOTOS — IMPORTANT
+Tu reçois entre 2 et 4 photos dans cet ordre exact :
+1) Photo(s) de DÉPART (S0) — face obligatoire, profil optionnel
+2) Photo(s) FINALE (S8) — face obligatoire, profil optionnel
+
+Compare TOUJOURS les photos S8 par rapport aux photos S0.
+
+MISSION
+Évalue uniquement l'évolution visuelle entre S0 et S8. Tu notes la progression observable, pas le niveau athlétique absolu. Une progression modeste mais authentique vaut plus qu'une transformation spectaculaire douteuse.
+
+GRILLE DE SCORING — note chaque rubrique indépendamment (total /100)
+
+1. Évolution de la silhouette — /40
+   40 : changement net et visible (affinement, resserrement, meilleure définition)
+   20 : évolution légère mais perceptible
+   0  : aucun changement visible ou évolution négative
+
+2. Maintien ou progression de la tonicité musculaire — /30
+   30 : tonicité préservée ou améliorée malgré la perte de masse
+   15 : neutre
+   0  : perte musculaire visible non compensée
+
+3. Authenticité et cohérence des photos — /30
+   30 : les deux séries sont cohérentes, clairement la même personne, conditions comparables
+   15 : léger doute (éclairage très différent, angle trompeur)
+   0  : photos manifestement suspectes ou non comparables
+
+RÈGLES
+- Tu ne peux pas détecter une différence de graisse ≤ 2 kg sur une photo. Sois prudent dans tes affirmations.
+- Ne juge pas la beauté ni le niveau athlétique absolu, uniquement l'évolution entre S0 et S8.
+- L'absence de changement visible est une réalité physiologique possible, pas forcément de la triche.
+
+Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
+{"transformationScore": <0-100>, "analysis": "<2 à 3 phrases en français, directes et factuelles, décrivant l'évolution visible.>"}`;
+}
+
+export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAIRawResult> {
+  const { s0Photo, s8Photo, apiKey } = params;
+
+  const images: object[] = [];
+  // S0 d'abord
+  const s0Front = parseBase64(s0Photo.frontBase64);
+  images.push({ type: 'image', source: { type: 'base64', media_type: s0Front.mediaType, data: s0Front.data } });
+  if (s0Photo.sideBase64) {
+    const s0Side = parseBase64(s0Photo.sideBase64);
+    images.push({ type: 'image', source: { type: 'base64', media_type: s0Side.mediaType, data: s0Side.data } });
+  }
+  // S8 ensuite
+  const s8Front = parseBase64(s8Photo.frontBase64);
+  images.push({ type: 'image', source: { type: 'base64', media_type: s8Front.mediaType, data: s8Front.data } });
+  if (s8Photo.sideBase64) {
+    const s8Side = parseBase64(s8Photo.sideBase64);
+    images.push({ type: 'image', source: { type: 'base64', media_type: s8Side.mediaType, data: s8Side.data } });
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      temperature: 0,
+      messages: [{
+        role: 'user',
+        content: [...images, { type: 'text', text: buildFinalPrompt() }],
+      }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Erreur API Anthropic (${res.status}): ${await res.text()}`);
+
+  const json = await res.json();
+  const raw: string = json.content?.[0]?.text ?? '';
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+
+  let parsed: FinalAIRawResult;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*"transformationScore"[\s\S]*\}/);
+    try {
+      parsed = match ? JSON.parse(match[0]) : { transformationScore: 50, analysis: cleaned };
+    } catch {
+      parsed = { transformationScore: 50, analysis: cleaned };
+    }
+  }
+
+  return {
+    transformationScore: Math.max(0, Math.min(100, Math.round(parsed.transformationScore))),
+    analysis: parsed.analysis,
+  };
+}
+
 export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
   const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey } = params;
 

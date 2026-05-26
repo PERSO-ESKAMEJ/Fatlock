@@ -8,7 +8,7 @@ export interface NutritionTargets {
   fat: number;
   carbs: number;
   weeklyLossKg: number;
-  projectedWeightAt8Weeks: number;
+  projectedWeight: number;
   safetyFloorApplied: boolean;
 }
 
@@ -24,7 +24,7 @@ export const INTENSITY_MULTIPLIER: Record<Intensity, number> = {
   flow: 2.0,
 };
 
-export function calculateTargets(profile: UserProfile, currentWeightKg: number): NutritionTargets {
+export function calculateTargets(profile: UserProfile, currentWeightKg: number, durationWeeks = 8): NutritionTargets {
   const { sex, height, age, activityLevel, intensity } = profile;
   const w = currentWeightKg;
 
@@ -69,7 +69,7 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
   const remainingKcal = Math.max(0, targetKcal - protein * 4);
   const carbs = Math.max(20, Math.round((remainingKcal * 0.37) / 4));
   const fat = Math.max(20, Math.round((remainingKcal * 0.63) / 9));
-  const projectedWeightAt8Weeks = +(w - actualWeeklyLossKg * 8).toFixed(1);
+  const projectedWeight = +(w - actualWeeklyLossKg * durationWeeks).toFixed(1);
 
   return {
     bmr: Math.round(bmr),
@@ -79,7 +79,7 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number):
     fat,
     carbs,
     weeklyLossKg: actualWeeklyLossKg,
-    projectedWeightAt8Weeks,
+    projectedWeight,
     safetyFloorApplied,
   };
 }

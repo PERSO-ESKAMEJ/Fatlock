@@ -125,9 +125,17 @@ export function calcTransformationScore(
   if (!startCompo || !currentCompo) return 0;
   const fatLostKg = startCompo.fatMassKg - currentCompo.fatMassKg;
   const muscleGainedKg = currentCompo.muscleMassKg - startCompo.muscleMassKg;
-  // 10 pts per 0.5kg fat lost, 15 pts per 0.5kg muscle gained
-  const fatScore = Math.max(0, Math.round((fatLostKg / 0.5) * 10));
-  const muscleScore = Math.max(0, Math.round((muscleGainedKg / 0.5) * 15));
+
+  // Caps physiologiques sur 8 semaines :
+  // graisse : max ~1 % du poids/semaine × 8 × 1,5 (marge balance impédance) ≈ 12 % du poids de départ
+  // muscle  : max ~1,5 kg en 8 semaines même dans des conditions idéales
+  const fatCapKg = startCompo.weightKg * 0.12;
+  const fatLostCapped = Math.min(Math.max(0, fatLostKg), fatCapKg);
+  const muscleGainedCapped = Math.min(Math.max(0, muscleGainedKg), 1.5);
+
+  // 10 pts par 500 g de graisse perdue, 15 pts par 500 g de muscle gagné
+  const fatScore = Math.round((fatLostCapped / 0.5) * 10);
+  const muscleScore = Math.round((muscleGainedCapped / 0.5) * 15);
   return fatScore + muscleScore;
 }
 
@@ -142,10 +150,18 @@ export function calcCompositeScore(
   transformationScore: number,
   regularityPercent: number
 ): number {
-  // 50% ego + 25% transformation + 25% regularity (normalized)
-  const egoNorm = egoPoints;
-  const transNorm = transformationScore * 10; // scale to be comparable
-  const regNorm = regularityPercent * 20; // scale 100% -> 2000
+  // Pondération : 50 % effort quotidien (ego) · 25 % transformation · 25 % régularité
+  //
+  // Normalisations pour ramener les trois composantes sur une plage similaire :
+  //   egoPoints      : 0–5 000 sur 8 semaines (all-in FLOW) → divisé par 5 → 0–1 000
+  //   transformScore : 0–150 après le cap physiologique      → ×(1 000/150) ≈ ×6,67 → 0–1 000
+  //   regularityPct  : 0–100                                 → ×10 → 0–1 000
+  //
+  // Avec cette normalisation, chaque composante contribue au maximum ~250 pts finaux.
+  const egoNorm   = Math.min(egoPoints, 5000) / 5;
+  const transNorm = Math.min(transformationScore, 150) * (1000 / 150);
+  const regNorm   = regularityPercent * 10;
+
   return Math.round(egoNorm * 0.5 + transNorm * 0.25 + regNorm * 0.25);
 }
 

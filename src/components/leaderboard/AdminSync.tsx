@@ -4,7 +4,7 @@ import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
 import { calcCurrentStreak, getTier, calcCompositeScore } from '../../lib/scoring';
-import { getCurrentWeek } from '../../store/useChallengeStore';
+import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
 import { generateRecapFile } from '../../lib/recap';
 import { getPhotosByWeek } from '../../lib/db';
@@ -38,7 +38,8 @@ export default function AdminSync() {
   const [showManual, setShowManual] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const currentWeek = getCurrentWeek(challenge.startDate);
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const sb = supabase();
 
   async function fetchStatus() {
@@ -77,14 +78,16 @@ export default function AdminSync() {
       const p = await getPhotosByWeek(profile.id, w);
       if (p) adminPhotos.push(p);
     }
+    // Filtre les logs sur la période du challenge uniquement
+    const challengeEnd = getChallengeEndDate(challenge.startDate, durationWeeks);
     return generateRecapFile(
       profile,
       challenge.id,
       currentWeek,
-      dailyLogs.filter((l) => l.userId === profile.id),
-      bodyCompositions.filter((c) => c.userId === profile.id),
+      dailyLogs.filter((l) => l.userId === profile.id && l.date >= challenge.startDate && l.date <= challengeEnd),
+      bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= currentWeek),
       adminPhotos,
-      weeklyScores.filter((s) => s.userId === profile.id),
+      weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= currentWeek),
     );
   }
 
@@ -106,12 +109,12 @@ export default function AdminSync() {
         const { profile: rProfile, dailyLogs: rLogs, weeklyScores: rScores } = recap;
 
         const totalEgo = rScores.reduce((sum, s) => sum + s.egoPoints + s.streakBonus + s.aiBonus, 0);
-        const latestScore = rScores[rScores.length - 1];
-        const composite = latestScore
+        const weekScore = rScores.find((s) => s.weekNumber === currentWeek) ?? rScores[rScores.length - 1];
+        const composite = weekScore
           ? calcCompositeScore(
-              latestScore.egoPoints + latestScore.streakBonus + latestScore.aiBonus,
-              latestScore.transformationScore,
-              latestScore.regularityScore
+              weekScore.egoPoints + weekScore.streakBonus + weekScore.aiBonus,
+              weekScore.transformationScore,
+              weekScore.regularityScore
             )
           : 0;
 
@@ -124,8 +127,8 @@ export default function AdminSync() {
           previousRank: masterLeaderboard?.entries.find((e) => e.userId === rProfile.id)?.currentRank ?? 0,
           tier: getTier(totalEgo),
           cumulativeEgoPoints: totalEgo,
-          regularityPercent: latestScore?.regularityScore ?? 0,
-          transformationPercent: latestScore?.transformationScore ?? 0,
+          regularityPercent: weekScore?.regularityScore ?? 0,
+          transformationPercent: weekScore?.transformationScore ?? 0,
           compositeScore: composite,
           currentStreak: calcCurrentStreak(rLogs, rProfile.intensity),
           weeklyCredibilityScore: undefined,

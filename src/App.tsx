@@ -34,6 +34,11 @@ export default function App() {
     }
   }, [challenge?.supabaseUrl, challenge?.supabaseAnonKey]);
 
+  useEffect(() => {
+    // Évite l'éviction automatique du stockage sur iOS Safari (~7 jours d'inactivité)
+    navigator.storage?.persist?.();
+  }, []);
+
   return (
     <ToastProvider>
       <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
@@ -49,7 +54,9 @@ export default function App() {
           <Route path="/classement" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
           <Route path="/vote-final" element={<ProtectedRoute><FinalVote /></ProtectedRoute>} />
           <Route path="/parametres" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/dev" element={<ProtectedRoute><DevSeed /></ProtectedRoute>} />
+          {import.meta.env.DEV && (
+            <Route path="/dev" element={<ProtectedRoute><DevSeed /></ProtectedRoute>} />
+          )}
           <Route path="*" element={<Navigate to={isSetup ? '/dashboard' : '/'} replace />} />
         </Routes>
       </div>

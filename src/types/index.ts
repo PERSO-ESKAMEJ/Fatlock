@@ -78,6 +78,7 @@ export interface ChallengeConfig {
   groupCode: string;
   groupSecret: string;
   startDate: string;
+  durationWeeks?: number;
   stakeAmount: number;
   adminId: string;
   participantIds: string[];
@@ -180,4 +181,53 @@ export interface MasterLeaderboard {
     topCredibility: string;
   };
   aiAnalyses?: AIAnalysisResult[];
+}
+
+// ── Vote final ────────────────────────────────────────────────────────────────
+
+export interface FinalTransformationCard {
+  anonymousId: string;
+  userId: string;
+  // Les photos ne sont PAS stockées dans le package Supabase (trop lourd pour le JSONB).
+  // Elles sont chargées à la demande depuis Supabase Storage ou IndexedDB local.
+}
+
+export interface FinalVote {
+  voterId: string;
+  voteeId: string;
+  submittedAt: string;
+}
+
+export interface FinalAIVerdict {
+  userId: string;
+  transformationScore: number;
+  adjustedScore: number;
+  aiBonus: number;
+  analysis: string;
+  generatedAt: string;
+}
+
+export interface FinalResult {
+  rank: number;
+  userId: string;
+  name: string;
+  sex: Sex;
+  voteCount: number;
+  voteScore: number;
+  aiBonus: number;
+  hebdoBonus: number;
+  finalScore: number;
+}
+
+export interface FinalVotePackage {
+  challengeId: string;
+  status: 'open' | 'revealed';
+  cards: FinalTransformationCard[];
+  votes: FinalVote[];
+  weeklyCredibilityAvgs: Record<string, number>;
+  aiVerdicts?: FinalAIVerdict[];
+  finalResults?: FinalResult[];
+  participantNames?: Record<string, string>;
+  createdAt: string;
+  revealedAt?: string;
 }

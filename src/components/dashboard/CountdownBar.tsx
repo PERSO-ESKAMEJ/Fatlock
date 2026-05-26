@@ -3,10 +3,12 @@ import { getDaysRemaining, getCurrentWeek } from '../../store/useChallengeStore'
 
 export default function CountdownBar() {
   const challenge = useProfileStore((s) => s.challenge)!;
-  const daysLeft = getDaysRemaining(challenge.startDate);
-  const currentWeek = getCurrentWeek(challenge.startDate);
-  const daysElapsed = Math.max(0, 56 - daysLeft);
-  const pct = Math.min(100, Math.round((daysElapsed / 56) * 100));
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const totalDays = durationWeeks * 7;
+  const daysLeft = getDaysRemaining(challenge.startDate, durationWeeks);
+  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const daysElapsed = Math.max(0, totalDays - daysLeft);
+  const pct = Math.min(100, Math.round((daysElapsed / totalDays) * 100));
 
   return (
     <div className="panel p-4">
@@ -15,7 +17,7 @@ export default function CountdownBar() {
           Challenge en cours
         </div>
         <div className="font-mono text-xs text-[var(--muted)]">
-          Semaine <span className="text-[var(--ink)] font-bold">{currentWeek}</span>/8
+          Semaine <span className="text-[var(--ink)] font-bold">{currentWeek}</span>/{durationWeeks}
         </div>
       </div>
       <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--panel2)' }}>

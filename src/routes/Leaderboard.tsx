@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { getCurrentWeek } from '../store/useChallengeStore';
+import { getCurrentWeek, getChallengeEndDate } from '../store/useChallengeStore';
 import { generateRecapFile, exportRecapAsFile } from '../lib/recap';
 import { getPhotosByWeek } from '../lib/db';
 import { supabase } from '../lib/supabase';
@@ -25,7 +25,8 @@ export default function Leaderboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [lbLoading, setLbLoading] = useState(false);
 
-  const currentWeek = getCurrentWeek(challenge.startDate);
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
 
   async function handleExportRecap() {
     setExportLoading(true);
@@ -35,25 +36,29 @@ export default function Leaderboard() {
         const p = await getPhotosByWeek(profile.id, w);
         if (p) allPhotos.push(p);
       }
+      const challengeEnd = getChallengeEndDate(challenge.startDate, durationWeeks);
       const recap = await generateRecapFile(
         profile,
         challenge.id,
         currentWeek,
-        dailyLogs.filter((l) => l.userId === profile.id),
-        bodyCompositions.filter((c) => c.userId === profile.id),
+        dailyLogs.filter((l) => l.userId === profile.id && l.date >= challenge.startDate && l.date <= challengeEnd),
+        bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= currentWeek),
         allPhotos,
-        weeklyScores.filter((s) => s.userId === profile.id),
+        weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= currentWeek),
       );
       exportRecapAsFile(recap);
 
       const sb = supabase();
       if (sb) {
+        // Photos exclues du payload Postgres : elles sont dans Supabase Storage.
+        // Ça évite de saturer le free tier Supabase avec des lignes JSONB > 1 Mo.
+        const { weeklyPhotos: _photos, ...recapWithoutPhotos } = recap;
         const { error } = await sb.from('recaps').upsert({
           challenge_id: challenge.id,
           user_id: profile.id,
           week_number: currentWeek,
           exported_at: new Date().toISOString(),
-          data: recap,
+          data: recapWithoutPhotos,
         }, { onConflict: 'challenge_id,user_id,week_number' });
 
         if (error) {

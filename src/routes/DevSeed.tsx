@@ -231,9 +231,9 @@ export default function DevSeed() {
       weekNumber: weeks,
       entries,
       weeklyHighlights: {
-        biggestMover: entries[rndInt(0, entries.length - 1)].name,
-        topStreak: entries.reduce((a, b) => a.currentStreak > b.currentStreak ? a : b).name,
-        topCredibility: entries.reduce((a, b) => (a.weeklyCredibilityScore ?? 0) > (b.weeklyCredibilityScore ?? 0) ? a : b).name,
+        biggestMover: entries[rndInt(0, entries.length - 1)].userId,
+        topStreak: entries.reduce((a, b) => a.currentStreak > b.currentStreak ? a : b).userId,
+        topCredibility: entries.reduce((a, b) => (a.weeklyCredibilityScore ?? 0) > (b.weeklyCredibilityScore ?? 0) ? a : b).userId,
       },
     };
 

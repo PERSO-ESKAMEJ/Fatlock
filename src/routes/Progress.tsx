@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
-import { getCurrentWeek } from '../store/useChallengeStore';
+import { getCurrentWeek, getChallengeState } from '../store/useChallengeStore';
 import { calculateTargets } from '../lib/nutrition';
 import { getPhotosByWeek } from '../lib/db';
 import { WeeklyPhoto } from '../types';
@@ -19,13 +19,14 @@ export default function Progress() {
   const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
   const aiResults = useLogStore((s) => s.aiResults).filter((r) => r.userId === profile.id);
   const navigate = useNavigate();
-  const currentWeek = getCurrentWeek(challenge.startDate);
-  const checkinDue = currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const checkinDue = getChallengeState(challenge.startDate, durationWeeks) === 'active' && currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
 
-  const totalWeeks = challenge.customSettings?.durationWeeks ?? 8;
+  const totalWeeks = durationWeeks;
 
   useEffect(() => {
     async function loadPhotos() {

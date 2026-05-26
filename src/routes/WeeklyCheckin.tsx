@@ -19,7 +19,8 @@ export default function WeeklyCheckin() {
   const { showToast } = useToast();
   const [searchParams] = useSearchParams();
 
-  const currentWeek = getCurrentWeek(challenge.startDate);
+  const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const isBaseline = searchParams.get('week') === '0';
   const targetWeek = isBaseline ? 0 : currentWeek;
 
@@ -60,7 +61,7 @@ export default function WeeklyCheckin() {
       addBodyComposition(savedComp);
 
       if (!isBaseline) {
-        const challengeStart = new Date(challenge.startDate);
+        const challengeStart = new Date(challenge.startDate + 'T12:00:00');
         const weekStartDate = new Date(challengeStart);
         weekStartDate.setDate(challengeStart.getDate() + (currentWeek - 1) * 7);
         const weekEndDate = new Date(challengeStart);
