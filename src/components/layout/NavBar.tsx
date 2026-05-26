@@ -120,17 +120,17 @@ export default function NavBar() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around py-2 px-2"
         style={{ background: 'rgba(7,12,26,0.97)', borderTop: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}
       >
-        {NAV_ITEMS.slice(0, 5).map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              className="flex flex-col items-center gap-0.5 px-2 py-1"
+              className="flex flex-col items-center gap-0.5 px-1 py-1"
             >
-              <span className="text-lg leading-none">{item.icon}</span>
+              <span className="text-base leading-none">{item.icon}</span>
               <span
-                className={`text-[9px] font-bold uppercase tracking-wider ${
+                className={`text-[8px] font-bold uppercase tracking-wider ${
                   isActive ? 'text-[var(--blue-bright)]' : 'text-[var(--muted2)]'
                 }`}
               >
@@ -139,10 +139,10 @@ export default function NavBar() {
             </NavLink>
           );
         })}
-        <NavLink to="/parametres" className="flex flex-col items-center gap-0.5 px-2 py-1">
-          <span className="text-lg leading-none">⚙</span>
+        <NavLink to="/parametres" className="flex flex-col items-center gap-0.5 px-1 py-1">
+          <span className="text-base leading-none">⚙</span>
           <span
-            className={`text-[9px] font-bold uppercase tracking-wider ${
+            className={`text-[8px] font-bold uppercase tracking-wider ${
               location.pathname === '/parametres' ? 'text-[var(--blue-bright)]' : 'text-[var(--muted2)]'
             }`}
           >

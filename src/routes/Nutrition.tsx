@@ -10,6 +10,8 @@ export default function Nutrition() {
   const profile = useProfileStore((s) => s.profile)!;
   const challenge = useProfileStore((s) => s.challenge)!;
   const getLatest = useLogStore((s) => s.getLatestBodyComp);
+  const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
+  const dailyLogs = useLogStore((s) => s.dailyLogs).filter((l) => l.userId === profile.id);
 
   const nutritionEnabled = challenge.challengeType !== 'custom' || (challenge.customSettings?.nutritionEnabled ?? true);
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
@@ -24,8 +26,6 @@ export default function Nutrition() {
       </PageWrapper>
     );
   }
-  const bodyComps = useLogStore((s) => s.bodyCompositions).filter((c) => c.userId === profile.id);
-  const dailyLogs = useLogStore((s) => s.dailyLogs).filter((l) => l.userId === profile.id);
 
   const latest = getLatest(profile.id);
   const currentWeight = latest?.weightKg ?? profile.startWeight;
@@ -98,7 +98,7 @@ export default function Nutrition() {
 
       {/* Projection */}
       <div className="panel p-4 mb-4">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Projection 8 semaines</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Projection {durationWeeks} semaines</div>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs text-[var(--muted)]">Poids actuel</div>
@@ -106,7 +106,7 @@ export default function Nutrition() {
           </div>
           <div className="text-2xl text-[var(--muted)]">→</div>
           <div className="text-right">
-            <div className="text-xs text-[var(--muted)]">Poids S8 projeté</div>
+            <div className="text-xs text-[var(--muted)]">Poids S{durationWeeks} projeté</div>
             <div className="font-mono text-xl font-bold" style={{ color: 'var(--green)' }}>{targets.projectedWeight} kg</div>
           </div>
         </div>
