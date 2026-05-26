@@ -187,6 +187,7 @@ export default function AdminSync() {
         if (!latestComp) continue;
 
         const prevComp = rComps.length > 1 ? rComps[rComps.length - 2] : null;
+        const prevPhotos = recap.weeklyPhotos?.find((p) => p.weekNumber === currentWeek - 1) ?? undefined;
 
         setAiProgress(recap.profile.name);
         try {
@@ -196,6 +197,7 @@ export default function AdminSync() {
             prevCompo: prevComp,
             currCompo: latestComp,
             photo: photos,
+            prevPhoto: prevPhotos,
             apiKey: challenge.anthropicApiKey,
           });
           addAIResult(result);
