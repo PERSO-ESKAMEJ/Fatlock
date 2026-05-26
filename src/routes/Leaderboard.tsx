@@ -151,13 +151,19 @@ export default function Leaderboard() {
                   : 'L\'admin n\'a pas encore partagé le classement. Importe le fichier master ci-dessous.'}
               </p>
               {!profile.isAdmin && (
-                <div className="mt-3">
-                  <input type="file" accept=".json" onChange={handleImportMaster} className="hidden" id="import-master" />
-                  <label htmlFor="import-master">
-                    <Button variant="ghost" size="sm" onClick={() => document.getElementById('import-master')?.click()}>
-                      Importer le classement master
+                <div className="mt-3 flex flex-col items-center gap-2">
+                  {supabase() && (
+                    <Button size="sm" onClick={handleFetchMasterFromSupabase} loading={lbLoading}>
+                      ↻ Récupérer le classement
                     </Button>
-                  </label>
+                  )}
+                  <input type="file" accept=".json" onChange={handleImportMaster} className="hidden" id="import-master" />
+                  <button
+                    onClick={() => document.getElementById('import-master')?.click()}
+                    className="text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+                  >
+                    Importer un fichier master →
+                  </button>
                 </div>
               )}
             </div>
