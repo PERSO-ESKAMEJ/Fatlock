@@ -77,56 +77,16 @@ async function downloadPhotoFromSupabase(
   }
 }
 
-// ── Sync status registry ─────────────────────────────────────────────────────
-// Suivi en mémoire de l'état de synchronisation de chaque photo vers Supabase Storage.
-// Réinitialisé à chaque rechargement de page (pas besoin de persister).
-
-type SyncState = 'pending' | 'synced' | 'failed' | 'local';
-const _syncStatus = new Map<string, SyncState>();
-const _syncListeners = new Map<string, Set<(s: SyncState) => void>>();
-
-function _notifySyncListeners(key: string, state: SyncState) {
-  _syncStatus.set(key, state);
-  _syncListeners.get(key)?.forEach((cb) => cb(state));
-}
-
-/** État de synchronisation Supabase d'une photo. 'local' = pas de Supabase configuré. */
-export function getPhotoSyncStatus(userId: string, weekNumber: number): SyncState {
-  return _syncStatus.get(photoKey(userId, weekNumber)) ?? 'local';
-}
-
-/** Abonnement réactif au statut de sync. Retourne une fonction de désabonnement. */
-export function subscribePhotoSync(
-  userId: string,
-  weekNumber: number,
-  cb: (state: SyncState) => void
-): () => void {
-  const key = photoKey(userId, weekNumber);
-  if (!_syncListeners.has(key)) _syncListeners.set(key, new Set());
-  _syncListeners.get(key)!.add(cb);
-  cb(_syncStatus.get(key) ?? 'local');
-  return () => _syncListeners.get(key)?.delete(cb);
-}
-
 export async function saveWeeklyPhoto(photo: WeeklyPhoto): Promise<void> {
   const db = await getDB();
   const record: StoredPhoto = { ...photo, key: photoKey(photo.userId, photo.weekNumber) };
   await db.put('weeklyPhotos', record);
 
-  const key = photoKey(photo.userId, photo.weekNumber);
   const sb = supabase();
-  if (!sb) {
-    _notifySyncListeners(key, 'local');
-    return;
-  }
+  if (!sb) return;
 
-  _notifySyncListeners(key, 'pending');
   uploadPhotoToSupabase(photo)
-    .then(() => _notifySyncListeners(key, 'synced'))
-    .catch((err) => {
-      console.warn('[FATLOCK] Photo sync failed:', err);
-      _notifySyncListeners(key, 'failed');
-    });
+    .catch((err) => console.warn('[FATLOCK] Photo sync failed:', err));
 }
 
 export async function getWeeklyPhoto(
@@ -145,17 +105,6 @@ export async function getWeeklyPhoto(
     await db.put('weeklyPhotos', stored).catch(() => undefined);
   }
   return remote;
-}
-
-export async function getAllPhotosForUser(userId: string): Promise<WeeklyPhoto[]> {
-  const db = await getDB();
-  const all = await db.getAllFromIndex('weeklyPhotos', 'byUser', userId);
-  return all.map(stripKey);
-}
-
-export async function deleteWeeklyPhoto(userId: string, weekNumber: number): Promise<void> {
-  const db = await getDB();
-  await db.delete('weeklyPhotos', photoKey(userId, weekNumber));
 }
 
 export async function clearUserPhotos(userId: string): Promise<void> {
@@ -189,14 +138,6 @@ export async function clearAllPhotos(): Promise<void> {
     const paths = data.map((f) => `${folder}/${f.name}`);
     await sb.storage.from('fatlock-photos').remove(paths);
   }
-}
-
-export async function deletePhotoFromSupabase(userId: string, weekNumber: number): Promise<void> {
-  const sb = supabase();
-  const challengeId = useProfileStore.getState().challenge?.id;
-  if (!sb || !challengeId) return;
-  const path = storagePath(challengeId, userId, weekNumber);
-  await sb.storage.from('fatlock-photos').remove([path]);
 }
 
 // Aliases used by components

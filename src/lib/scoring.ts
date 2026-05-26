@@ -9,7 +9,7 @@ const INTENSITY_RITUAL_THRESHOLD: Record<Intensity, number> = {
   safe: 0.6,
 };
 
-export const RITUAL_POINTS: Record<string, number> = {
+const RITUAL_POINTS: Record<string, number> = {
   // Safe
   no_refined_sugar: 10,
   hydration_2L: 10,
@@ -28,10 +28,6 @@ export const RITUAL_POINTS: Record<string, number> = {
   steps_10k: 10,
   last_meal_before_20: 10,
   cardio_extra: 15,
-  // Custom challenge ritual IDs (FATLOCK_DEFAULT_CUSTOM_RITUALS)
-  whole_grains_only: 10,
-  veggies_every_meal: 10,
-  good_fats: 10,
 };
 
 export function calcDayRitualPoints(log: DailyLog, intensity: Intensity, customRituals?: CustomRitual[]): number {
@@ -62,21 +58,6 @@ function isDayValid(log: DailyLog, intensity: Intensity, customRituals?: CustomR
     .filter(([, v]) => v)
     .reduce((sum, [k]) => sum + (RITUAL_POINTS[k] ?? 0), 0);
   return rawPoints >= maxPossible * 0.6;
-}
-
-export function calcStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {
-  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
-  let streak = 0;
-  let maxStreak = 0;
-  for (const log of sorted) {
-    if (isDayValid(log, intensity, customRituals)) {
-      streak++;
-      if (streak > maxStreak) maxStreak = streak;
-    } else {
-      streak = 0;
-    }
-  }
-  return streak;
 }
 
 export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {

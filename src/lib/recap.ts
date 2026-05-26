@@ -63,19 +63,3 @@ export async function verifyRecapFile(recap: RecapFile): Promise<boolean> {
   const computed = await sha256(checksumInput);
   return computed === checksum;
 }
-
-export function importRecapFromFile(file: File): Promise<RecapFile> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsed = JSON.parse(e.target?.result as string) as RecapFile;
-        resolve(parsed);
-      } catch {
-        reject(new Error('Fichier recap invalide ou corrompu.'));
-      }
-    };
-    reader.onerror = () => reject(new Error('Erreur de lecture du fichier.'));
-    reader.readAsText(file);
-  });
-}
