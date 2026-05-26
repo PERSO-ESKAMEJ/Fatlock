@@ -79,13 +79,22 @@ Barème du score :
   }
 
   const json = await res.json();
-  const text: string = json.content?.[0]?.text ?? '';
+  const raw: string = json.content?.[0]?.text ?? '';
+
+  // Strip markdown code blocks that Claude sometimes adds despite instructions
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
 
   let parsed: { credibilityScore: number; analysis: string };
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(cleaned);
   } catch {
-    parsed = { credibilityScore: 50, analysis: text };
+    // Try to extract a JSON object anywhere in the text
+    const match = cleaned.match(/\{[\s\S]*"credibilityScore"[\s\S]*\}/);
+    try {
+      parsed = match ? JSON.parse(match[0]) : { credibilityScore: 50, analysis: cleaned };
+    } catch {
+      parsed = { credibilityScore: 50, analysis: cleaned };
+    }
   }
 
   return {
