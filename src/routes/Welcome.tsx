@@ -55,6 +55,8 @@ export default function Welcome() {
   const hasJoinLink = joinParam.length === 6;
 
   const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
+  const [profileStep, setProfileStep] = useState(1);
+  const PROFILE_STEPS = 6;
   const [mode, setMode] = useState<'create' | 'join'>(hasJoinLink ? 'join' : 'create');
   const [challengeType, setChallengeType] = useState<ChallengeType>('fatlock');
   const [customSettings, setCustomSettings] = useState<CustomChallengeSettings>({
@@ -215,7 +217,7 @@ export default function Welcome() {
           <Button size="lg" onClick={() => { setMode('create'); setStep('type-select'); }}>
             Créer un challenge
           </Button>
-          <Button size="lg" variant="ghost" onClick={() => { setMode('join'); setStep('profile'); }}>
+          <Button size="lg" variant="ghost" onClick={() => { setMode('join'); setStep('profile'); setProfileStep(1); }}>
             Rejoindre un challenge
           </Button>
         </div>
@@ -234,7 +236,7 @@ export default function Welcome() {
         </div>
         <div className="flex flex-col gap-3 w-full max-w-sm">
           <button
-            onClick={() => { setChallengeType('fatlock'); setStep('profile'); }}
+            onClick={() => { setChallengeType('fatlock'); setStep('profile'); setProfileStep(1); }}
             className="panel p-5 text-left rounded-xl transition-all hover:border-[var(--blue)]"
             style={{ border: '1px solid var(--border)' }}
           >
@@ -245,7 +247,7 @@ export default function Welcome() {
             <div className="text-xs text-[var(--muted)]">Objectif perte de gras — durée configurable. Rituels, nutrition et suivi de composition corporelle pré-configurés.</div>
           </button>
           <button
-            onClick={() => { setChallengeType('custom'); setStep('profile'); }}
+            onClick={() => { setChallengeType('custom'); setStep('profile'); setProfileStep(1); }}
             className="panel p-5 text-left rounded-xl transition-all hover:border-[var(--cyan)]"
             style={{ border: '1px solid var(--border)' }}
           >
@@ -260,130 +262,221 @@ export default function Welcome() {
     );
   }
 
-  // Profile setup
+  // Profile setup — multi-step onboarding
   if (step === 'profile') {
+    const canNext = [
+      true,                              // 1 sexe
+      name.trim().length > 0,            // 2 prénom
+      !!age && !!height && !!weight,     // 3 corps
+      true,                              // 4 activité
+      true,                              // 5 intensité
+      true,                              // 6 planning
+    ][profileStep - 1];
+
+    function goBack() {
+      if (profileStep === 1) setStep(mode === 'join' ? 'landing' : 'type-select');
+      else setProfileStep((p: number) => p - 1);
+    }
+    function goNext() {
+      if (profileStep < PROFILE_STEPS) setProfileStep((p: number) => p + 1);
+      else handleProfileSave();
+    }
+
+    const ACTIVITY_CARDS = [
+      { value: 1.2,   emoji: '🪑', label: 'Sédentaire',          sub: 'Bureau, peu de mouvement' },
+      { value: 1.375, emoji: '🚶', label: 'Légèrement actif',    sub: 'Sport 1–2×/semaine' },
+      { value: 1.55,  emoji: '🏃', label: 'Modérément actif',    sub: 'Sport 3–4×/semaine' },
+      { value: 1.725, emoji: '💪', label: 'Très actif',          sub: 'Sport 5–6×/semaine' },
+      { value: 1.9,   emoji: '🏆', label: 'Extrêmement actif',   sub: 'Athlète / travail physique' },
+    ];
+
     return (
-      <div className="min-h-screen px-4 py-10 max-w-lg mx-auto animate-fade-in">
-        <div className="mb-8">
-          <button onClick={() => setStep('landing')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-4 block">← Retour</button>
-          <h1 className="font-display text-3xl uppercase tracking-wider">Ton profil</h1>
-          <p className="text-sm text-[var(--muted)] mt-1">Les données servent à calculer tes objectifs personnalisés.</p>
+      <div className="min-h-screen flex flex-col px-4 pt-8 pb-10 max-w-lg mx-auto animate-fade-in">
+
+        {/* Progress bar */}
+        <div className="w-full h-1 rounded-full mb-8" style={{ background: 'var(--panel2)' }}>
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${(profileStep / PROFILE_STEPS) * 100}%`, background: 'var(--blue)' }}
+          />
         </div>
 
-        <div className="space-y-5">
-          {/* Sex — FIRST */}
-          <div>
-            <label>Sexe</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              {(['M', 'F'] as Sex[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSex(s)}
-                  className="py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all"
-                  style={{
-                    background: sex === s ? 'var(--blue)' : 'var(--panel)',
-                    border: `1px solid ${sex === s ? 'var(--blue)' : 'var(--border)'}`,
-                    color: sex === s ? 'white' : 'var(--muted)',
-                  }}
-                >
-                  {s === 'M' ? 'Homme' : 'Femme'}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Step content */}
+        <div className="flex-1">
 
-          <div>
-            <label>Prénom / Pseudo</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ton nom de compétiteur" maxLength={30} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label>Âge</label>
-              <input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="25" min="16" max="70" />
-            </div>
-            <div>
-              <label>Taille (cm)</label>
-              <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="175" min="140" max="220" />
-            </div>
-            <div>
-              <label>Poids (kg)</label>
-              <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="80" min="40" max="200" step="0.1" />
-            </div>
-          </div>
-
-          <div>
-            <label>Niveau d'activité</label>
-            <select value={activityLevel} onChange={(e) => setActivityLevel(parseFloat(e.target.value))}>
-              {ACTIVITY_LEVELS.map((a) => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Intensity */}
-          <div>
-            <label>Intensité FATLOCK</label>
-            <div className="space-y-2 mt-1">
-              {INTENSITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setIntensity(opt.value)}
-                  className="w-full p-3 rounded-lg text-left transition-all"
-                  style={{
-                    background: intensity === opt.value ? `${INTENSITY_COLORS[opt.value]}15` : 'var(--panel)',
-                    border: `1px solid ${intensity === opt.value ? INTENSITY_COLORS[opt.value] : 'var(--border)'}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm" style={{ color: INTENSITY_COLORS[opt.value] }}>
-                      {opt.label}
-                    </span>
-                    <span className="text-xs font-mono" style={{ color: INTENSITY_COLORS[opt.value] }}>
-                      {opt.mult}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[var(--muted)] mt-0.5">{opt.sub}</div>
-                  {opt.value === 'standard' && (
-                    <div className="text-xs font-bold mt-0.5" style={{ color: 'var(--blue-bright)' }}>★ Recommandé</div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Training schedule */}
-          <div>
-            <label>Planning d'entraînement (par défaut)</label>
-            <div className="grid grid-cols-7 gap-1 mt-1">
-              {DAYS.map((day, i) => (
-                <div key={day} className="text-center">
-                  <div className="text-xs text-[var(--muted2)] mb-1">{DAY_LABELS[i]}</div>
-                  <select
-                    className="text-center"
-                    style={{ fontSize: 10, padding: '4px 2px' }}
-                    value={trainingDays[day] ?? ''}
-                    onChange={(e) =>
-                      setTrainingDays((td) => ({ ...td, [day]: (e.target.value as DayType) || null }))
-                    }
+          {/* Étape 1 — Sexe */}
+          {profileStep === 1 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Tu es…</h2>
+              <p className="text-sm text-[var(--muted)] mb-8">Pour calibrer ton métabolisme de base.</p>
+              <div className="grid grid-cols-2 gap-3">
+                {(['M', 'F'] as Sex[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setSex(s); setTimeout(() => setProfileStep(2), 200); }}
+                    className="py-8 rounded-xl font-display text-2xl uppercase tracking-widest transition-all"
+                    style={{
+                      background: sex === s ? 'var(--blue)' : 'var(--panel)',
+                      border: `2px solid ${sex === s ? 'var(--blue)' : 'var(--border)'}`,
+                      color: sex === s ? 'white' : 'var(--muted)',
+                    }}
                   >
-                    <option value="">—</option>
-                    {DAY_TYPES.map((dt) => (
-                      <option key={dt.value} value={dt.value}>{dt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+                    {s === 'M' ? 'Homme' : 'Femme'}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <Button
-            className="w-full"
-            onClick={handleProfileSave}
-            disabled={!name || !age || !height || !weight}
+          {/* Étape 2 — Prénom */}
+          {profileStep === 2 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton nom</h2>
+              <p className="text-sm text-[var(--muted)] mb-8">Prénom ou pseudo — ce que le classement affichera.</p>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && name.trim() && goNext()}
+                placeholder="Ton nom de compétiteur"
+                maxLength={30}
+                autoFocus
+                className="text-lg"
+              />
+            </div>
+          )}
+
+          {/* Étape 3 — Corps */}
+          {profileStep === 3 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton corps</h2>
+              <p className="text-sm text-[var(--muted)] mb-8">Sert à calculer ton BMR et tes objectifs caloriques.</p>
+              <div className="space-y-4">
+                <div>
+                  <label>Âge</label>
+                  <input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="25" min="16" max="70" autoFocus />
+                </div>
+                <div>
+                  <label>Taille (cm)</label>
+                  <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="175" min="140" max="220" />
+                </div>
+                <div>
+                  <label>Poids de départ (kg)</label>
+                  <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="80" min="40" max="200" step="0.1" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Étape 4 — Activité */}
+          {profileStep === 4 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton activité</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">Hors séances FATLOCK — ton quotidien général.</p>
+              <div className="space-y-2">
+                {ACTIVITY_CARDS.map((a) => (
+                  <button
+                    key={a.value}
+                    onClick={() => { setActivityLevel(a.value); setTimeout(() => setProfileStep(5), 200); }}
+                    className="w-full p-4 rounded-xl text-left flex items-center gap-4 transition-all"
+                    style={{
+                      background: activityLevel === a.value ? 'rgba(47,123,255,0.12)' : 'var(--panel)',
+                      border: `1px solid ${activityLevel === a.value ? 'var(--blue)' : 'var(--border)'}`,
+                    }}
+                  >
+                    <span className="text-2xl">{a.emoji}</span>
+                    <div>
+                      <div className="font-bold text-sm" style={{ color: activityLevel === a.value ? 'var(--blue-bright)' : 'var(--ink)' }}>{a.label}</div>
+                      <div className="text-xs text-[var(--muted)]">{a.sub}</div>
+                    </div>
+                    {activityLevel === a.value && <span className="ml-auto text-[var(--blue-bright)]">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Étape 5 — Intensité */}
+          {profileStep === 5 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton mode</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">Définit ton déficit calorique et le multiplicateur de points.</p>
+              <div className="space-y-3">
+                {INTENSITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setIntensity(opt.value)}
+                    className="w-full p-4 rounded-xl text-left transition-all"
+                    style={{
+                      background: intensity === opt.value ? `${INTENSITY_COLORS[opt.value]}15` : 'var(--panel)',
+                      border: `2px solid ${intensity === opt.value ? INTENSITY_COLORS[opt.value] : 'var(--border)'}`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-display text-lg" style={{ color: INTENSITY_COLORS[opt.value] }}>{opt.label}</span>
+                      <span className="text-xs font-mono font-bold" style={{ color: INTENSITY_COLORS[opt.value] }}>{opt.mult}</span>
+                    </div>
+                    <div className="text-xs text-[var(--muted)]">{opt.sub}</div>
+                    {opt.value === 'standard' && (
+                      <div className="text-xs font-bold mt-1" style={{ color: 'var(--blue-bright)' }}>★ Recommandé</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Étape 6 — Planning */}
+          {profileStep === 6 && (
+            <div className="animate-fade-in">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">{profileStep} / {PROFILE_STEPS}</p>
+              <h2 className="font-display text-3xl uppercase tracking-wider text-[var(--ink)] mb-1">Ton planning</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">Personnalisable dans Paramètres à tout moment.</p>
+              <div className="space-y-2">
+                {DAYS.map((day, i) => (
+                  <div key={day} className="flex items-center gap-3">
+                    <div className="w-10 text-xs font-bold text-[var(--muted)] uppercase">{DAY_LABELS[i]}</div>
+                    <select
+                      className="flex-1"
+                      value={trainingDays[day] ?? ''}
+                      onChange={(e) => setTrainingDays((td) => ({ ...td, [day]: (e.target.value as DayType) || null }))}
+                    >
+                      <option value="">— Repos</option>
+                      {DAY_TYPES.filter(dt => dt.value !== '').map((dt) => (
+                        <option key={dt.value} value={dt.value}>{dt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation — fixe en bas */}
+        <div className="flex gap-3 mt-10">
+          <button
+            onClick={goBack}
+            className="px-5 py-3 rounded-lg text-sm font-medium transition-all"
+            style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--muted)' }}
           >
-            Voir mes objectifs →
-          </Button>
+            ← Retour
+          </button>
+          {/* Étape 1 et 4 : auto-avancement au clic — bouton Suivant masqué */}
+          {profileStep !== 1 && profileStep !== 4 && (
+            <Button
+              className="flex-1"
+              onClick={goNext}
+              disabled={!canNext}
+            >
+              {profileStep === PROFILE_STEPS ? 'Voir mes objectifs →' : 'Suivant →'}
+            </Button>
+          )}
         </div>
       </div>
     );
