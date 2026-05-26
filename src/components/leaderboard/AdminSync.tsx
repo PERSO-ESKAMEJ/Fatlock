@@ -3,7 +3,7 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
-import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore } from '../../lib/scoring';
+import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses } from '../../lib/scoring';
 import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
 import { generateRecapFile } from '../../lib/recap';
@@ -125,22 +125,20 @@ export default function AdminSync() {
           0
         );
 
-        // Streak + AI bonuses only from scored weeks (not egoPoints — already in liveDailyEgo)
-        const scoredWeekNums = new Set(rScores.map((s) => s.weekNumber));
-        const scoredBonuses = rScores.reduce((sum, s) => sum + s.streakBonus + s.aiBonus, 0);
-
-        // Retroactive streak bonus for weeks with logs but no check-in
-        let retroStreakBonus = 0;
+        // Cumulative streak bonuses for all weeks that have logs (cross-week streaks)
+        const allWeeksWithLogs: number[] = [];
         for (let w = 1; w <= currentWeek; w++) {
-          if (scoredWeekNums.has(w)) continue;
           const { start, end } = weekRange(w);
-          const weekLogs = rLogs.filter((l) => l.date >= start && l.date < end);
-          if (weekLogs.length > 0) {
-            retroStreakBonus += calcCurrentStreak(weekLogs, rProfile.intensity, customRituals) * 5;
+          if (rLogs.some((l) => l.date >= start && l.date < end)) {
+            allWeeksWithLogs.push(w);
           }
         }
+        const totalStreakBonuses = calcTotalStreakBonuses(
+          rLogs, challenge.startDate, allWeeksWithLogs, rProfile.intensity, customRituals
+        );
+        const aiOnlyBonuses = rScores.reduce((sum, s) => sum + s.aiBonus, 0);
 
-        const totalEgo = liveDailyEgo + scoredBonuses + retroStreakBonus;
+        const totalEgo = liveDailyEgo + totalStreakBonuses + aiOnlyBonuses;
 
         // Composite score for ranking: use current week's check-in if available, else synthesize from daily logs
         const currentWeekScore = rScores.find((s) => s.weekNumber === currentWeek);

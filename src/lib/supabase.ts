@@ -6,6 +6,10 @@ export function setupSupabase(url: string, anonKey: string): void {
   _client = createClient(url, anonKey);
 }
 
+export function clearSupabase(): void {
+  _client = null;
+}
+
 export function supabase(): SupabaseClient | null {
   return _client;
 }

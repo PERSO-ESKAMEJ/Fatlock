@@ -67,16 +67,22 @@ export default function Progress() {
     );
   }
 
-  const targets = calculateTargets(profile, profile.startWeight, durationWeeks);
+  const s0Comp = bodyComps.find((c) => c.weekNumber === 0);
+  const s0Weight = s0Comp?.weightKg ?? profile.startWeight;
+  const weightDirection = challenge.customSettings?.weightDirection ?? 'down';
+  const targets = calculateTargets(profile, s0Weight, durationWeeks, weightDirection);
 
-  // Weight chart
+  // Weight chart — S0 from check-in data, then weekly comps (exclude weekNumber=0 to avoid duplicate)
   const weightData = [
-    { label: 'S0', weight: profile.startWeight, target: profile.startWeight },
-    ...bodyComps.sort((a, b) => a.weekNumber - b.weekNumber).map((c) => ({
-      label: `S${c.weekNumber}`,
-      weight: c.weightKg,
-      target: +(profile.startWeight - targets.weeklyLossKg * c.weekNumber).toFixed(1),
-    })),
+    { label: 'S0', weight: s0Weight, target: s0Weight },
+    ...bodyComps
+      .filter((c) => c.weekNumber > 0)
+      .sort((a, b) => a.weekNumber - b.weekNumber)
+      .map((c) => ({
+        label: `S${c.weekNumber}`,
+        weight: c.weightKg,
+        target: +(s0Weight - targets.weeklyLossKg * c.weekNumber).toFixed(1),
+      })),
   ];
 
   // Body comp chart

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useProfileStore } from './store/useProfileStore';
-import { setupSupabase } from './lib/supabase';
+import { setupSupabase, clearSupabase } from './lib/supabase';
 import Welcome from './routes/Welcome';
 import Dashboard from './routes/Dashboard';
 import Rituals from './routes/Rituals';
@@ -31,6 +31,8 @@ export default function App() {
   useEffect(() => {
     if (challenge?.supabaseUrl && challenge?.supabaseAnonKey) {
       setupSupabase(challenge.supabaseUrl, challenge.supabaseAnonKey);
+    } else {
+      clearSupabase();
     }
   }, [challenge?.supabaseUrl, challenge?.supabaseAnonKey]);
 

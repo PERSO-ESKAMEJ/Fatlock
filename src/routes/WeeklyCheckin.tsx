@@ -26,6 +26,10 @@ export default function WeeklyCheckin() {
   const isBaseline = searchParams.get('week') === '0';
   const targetWeek = isBaseline ? 0 : currentWeek;
 
+  const trackPhotos = challenge.challengeType === 'custom'
+    ? (challenge.customSettings?.trackPhotos ?? 'required')
+    : 'required';
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [savedComp, setSavedComp] = useState<BodyComposition | null>(null);
   const [frontB64, setFrontB64] = useState('');
@@ -41,11 +45,11 @@ export default function WeeklyCheckin() {
 
   function handleCompSave(comp: BodyComposition) {
     setSavedComp(comp);
-    setStep(2);
+    setStep(trackPhotos === 'disabled' ? 3 : 2);
   }
 
   async function handleConfirm() {
-    if (!savedComp || !frontB64 || !sideB64) {
+    if (!savedComp || (trackPhotos === 'required' && (!frontB64 || !sideB64))) {
       showToast('Photos face + profil obligatoires', 'error');
       return;
     }
@@ -77,6 +81,7 @@ export default function WeeklyCheckin() {
         const customRituals = challenge.challengeType === 'custom'
           ? challenge.customSettings?.rituals
           : undefined;
+        const allUserLogs = dailyLogs.filter((l) => l.userId === profile.id);
         const score = buildWeeklyScore(
           profile.id,
           currentWeek,
@@ -87,7 +92,8 @@ export default function WeeklyCheckin() {
           null,
           7,
           customRituals,
-          durationWeeks
+          durationWeeks,
+          allUserLogs
         );
         addWeeklyScore(score);
       }
@@ -219,7 +225,7 @@ export default function WeeklyCheckin() {
 
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setStep(1)}>← Retour</Button>
-            <Button className="flex-1" onClick={() => setStep(3)} disabled={!frontB64 || !sideB64}>
+            <Button className="flex-1" onClick={() => setStep(3)} disabled={trackPhotos === 'required' && (!frontB64 || !sideB64)}>
               Continuer →
             </Button>
           </div>

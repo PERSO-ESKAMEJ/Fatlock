@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { getCurrentWeek } from '../store/useChallengeStore';
+import { getCurrentWeek, getChallengeState } from '../store/useChallengeStore';
 import { getWeeklyPhoto } from '../lib/db';
 import { runFinalAIAnalysis } from '../lib/aiAnalysis';
 import { supabase } from '../lib/supabase';
@@ -160,6 +160,7 @@ export default function FinalVote() {
   const entries = masterLeaderboard?.entries ?? [];
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const sb = supabase();
 
   useEffect(() => { fetchPackage(); }, []);
@@ -193,6 +194,10 @@ export default function FinalVote() {
   // ── Admin : générer le package ───────────────────────────────────────────────
 
   async function handleGeneratePackage() {
+    if (challengeState !== 'completed') {
+      showToast('Le vote final n\'est disponible qu\'une fois le challenge terminé', 'error');
+      return;
+    }
     if (entries.length === 0) { showToast('Génère d\'abord le classement dans Sync hebdo', 'error'); return; }
     setGenerating(true);
     try {
@@ -460,7 +465,8 @@ export default function FinalVote() {
   // Admin : panneau de contrôle
   if (profile.isAdmin) {
     const votedCount = pkg.votes.length;
-    const totalParticipants = pkg.cards.length;
+    // Admin has no voting UI — exclude from denominator
+    const totalParticipants = pkg.cards.filter((c) => c.userId !== profile.id).length;
     const aiDone = (pkg.aiVerdicts?.length ?? 0) > 0;
     const votedNames = pkg.votes
       .map(v => entries.find(e => e.userId === v.voterId)?.name ?? v.voterId.slice(0, 6))
@@ -468,6 +474,14 @@ export default function FinalVote() {
 
     return (
       <PageWrapper title="Vote Final — Admin">
+        {!masterLeaderboard && (
+          <div
+            className="mb-4 p-3 rounded-lg text-xs"
+            style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.35)', color: 'var(--gold)' }}
+          >
+            ⚠ Aucun classement en cache. Les hebdo-bonus du vote seront nuls si aucun sync n'a été effectué. Lance la Sync hebdo depuis le Classement avant de révéler.
+          </div>
+        )}
         {/* Étape 1 */}
         <div className="panel p-4 mb-4">
           <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--muted)' }}>

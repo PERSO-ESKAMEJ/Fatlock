@@ -1,4 +1,4 @@
-import { UserProfile, Intensity } from '../types';
+import { UserProfile, Intensity, WeightDirection } from '../types';
 
 export interface NutritionTargets {
   bmr: number;
@@ -24,7 +24,12 @@ export const INTENSITY_MULTIPLIER: Record<Intensity, number> = {
   flow: 2.0,
 };
 
-export function calculateTargets(profile: UserProfile, currentWeightKg: number, durationWeeks = 8): NutritionTargets {
+export function calculateTargets(
+  profile: UserProfile,
+  currentWeightKg: number,
+  durationWeeks = 8,
+  weightDirection: WeightDirection = 'down'
+): NutritionTargets {
   const { sex, height, age, activityLevel, intensity } = profile;
   const w = currentWeightKg;
 
@@ -34,23 +39,39 @@ export function calculateTargets(profile: UserProfile, currentWeightKg: number, 
       : 10 * w + 6.25 * height - 5 * age - 161;
 
   const tdee = bmr * activityLevel;
-  const weeklyLossKg = w * WEEKLY_LOSS_RATE[intensity];
-  const dailyDeficit = (weeklyLossKg * 7700) / 7;
 
-  let targetKcal = Math.round(tdee - dailyDeficit);
+  let targetKcal: number;
+  let actualWeeklyLossKg: number;
+  let safetyFloorApplied = false;
 
-  // Flow has a lower absolute floor — the deficit is intentional and assumed
-  const floor = intensity === 'flow'
-    ? 1400
-    : sex === 'M'
-      ? Math.max(Math.round(bmr * 1.1), 1500)
-      : Math.max(Math.round(bmr * 1.1), 1300);
-  const safetyFloorApplied = targetKcal < floor;
-  if (safetyFloorApplied) targetKcal = floor;
+  if (weightDirection === 'stable') {
+    targetKcal = Math.round(tdee);
+    actualWeeklyLossKg = 0;
+  } else if (weightDirection === 'up') {
+    // Lean bulk: ~0.4% body weight/week surplus
+    const weeklyGainKg = w * 0.004;
+    const dailySurplus = (weeklyGainKg * 7700) / 7;
+    targetKcal = Math.round(tdee + dailySurplus);
+    // Negative value = weight gain (projected weight will increase)
+    actualWeeklyLossKg = +(-(weeklyGainKg).toFixed(2));
+  } else {
+    // Deficit (default)
+    const weeklyLossKg = w * WEEKLY_LOSS_RATE[intensity];
+    const dailyDeficit = (weeklyLossKg * 7700) / 7;
+    targetKcal = Math.round(tdee - dailyDeficit);
 
-  // Recalculate actual weekly loss based on real deficit after floor
-  const actualDailyDeficit = Math.round(tdee) - targetKcal;
-  const actualWeeklyLossKg = +((actualDailyDeficit * 7) / 7700).toFixed(2);
+    // Flow has a lower absolute floor — the deficit is intentional and assumed
+    const floor = intensity === 'flow'
+      ? 1400
+      : sex === 'M'
+        ? Math.max(Math.round(bmr * 1.1), 1500)
+        : Math.max(Math.round(bmr * 1.1), 1300);
+    safetyFloorApplied = targetKcal < floor;
+    if (safetyFloorApplied) targetKcal = floor;
+
+    const actualDailyDeficit = Math.round(tdee) - targetKcal;
+    actualWeeklyLossKg = +((actualDailyDeficit * 7) / 7700).toFixed(2);
+  }
 
   // Adaptive protein: base by intensity + sex/activity adjustments
   const proteinBase: Record<Intensity, number> = { safe: 1.8, standard: 2.0, flow: 2.2 };

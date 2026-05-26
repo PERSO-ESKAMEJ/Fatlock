@@ -44,7 +44,7 @@ export default function Rituals() {
   const isCustom = challenge.challengeType === 'custom';
   const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
-  const todayConfirmed = isCodeConfirmed(today);
+  const todayConfirmed = isCodeConfirmed(challenge.groupCode, today);
   // Hier est toujours accessible sans code — la journée est terminée
   const unlocked = isYesterday || todayConfirmed;
 

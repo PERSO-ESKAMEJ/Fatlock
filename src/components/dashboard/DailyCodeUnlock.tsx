@@ -15,13 +15,13 @@ export default function DailyCodeUnlock() {
   const { showToast } = useToast();
 
   const today = getTodayStr();
-  const alreadyConfirmed = isCodeConfirmed(today);
+  const alreadyConfirmed = isCodeConfirmed(challenge.groupCode, today);
   const dailyCode = getDailyCode(challenge.groupSecret, today);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
 
   function confirmAndLog() {
-    confirmCode(today);
+    confirmCode(challenge.groupCode, today);
     const existing = getDailyLog(profile.id, today);
     upsertDailyLog({
       userId: profile.id,

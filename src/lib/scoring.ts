@@ -189,6 +189,26 @@ export function displayTier(tier: RankTier, sex: Sex): string {
   return tier;
 }
 
+export function calcTotalStreakBonuses(
+  allLogs: DailyLog[],
+  challengeStartDate: string,
+  weekNumbers: number[],
+  intensity: Intensity,
+  customRituals?: CustomRitual[]
+): number {
+  const [y, m, d] = challengeStartDate.split('-').map(Number);
+  const startMs = new Date(y, m - 1, d).getTime();
+  let total = 0;
+  for (const w of weekNumbers) {
+    const weekEndMs = startMs + w * 7 * 86400000 - 86400000;
+    const we = new Date(weekEndMs);
+    const weekEndStr = `${we.getFullYear()}-${String(we.getMonth() + 1).padStart(2, '0')}-${String(we.getDate()).padStart(2, '0')}`;
+    const logsUpToEnd = allLogs.filter((l) => l.date <= weekEndStr);
+    total += calcCurrentStreak(logsUpToEnd, intensity, customRituals) * 5;
+  }
+  return total;
+}
+
 export function buildWeeklyScore(
   userId: string,
   weekNumber: number,
@@ -199,13 +219,15 @@ export function buildWeeklyScore(
   credibilityScore: number | null,
   totalDays: number,
   customRituals?: CustomRitual[],
-  durationWeeks = 8
+  durationWeeks = 8,
+  allLogs?: DailyLog[]
 ): WeeklyScore {
   const egoPoints = logs.reduce(
     (sum, log) => sum + calcDayRitualPoints(log, intensity, customRituals),
     0
   );
-  const streakBonus = calcCurrentStreak(logs, intensity, customRituals) * 5;
+  const streakLogs = allLogs ?? logs;
+  const streakBonus = calcCurrentStreak(streakLogs, intensity, customRituals) * 5;
   const aiBonus = calcAIBonus(credibilityScore, intensity);
   const transformationScore = calcTransformationScore(startCompo, currentCompo, durationWeeks);
   const regularityScore = calcRegularityScore(logs, totalDays);

@@ -1,7 +1,7 @@
 import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
-import { getTier, displayTier, calcCurrentStreak, calcDayRitualPoints } from '../../lib/scoring';
+import { getTier, displayTier, calcCurrentStreak, calcDayRitualPoints, calcTotalStreakBonuses } from '../../lib/scoring';
 import { getTierColor } from '../../constants/ranks';
 
 export default function RankCard() {
@@ -14,12 +14,18 @@ export default function RankCard() {
 
   const customRituals = challenge.challengeType === 'custom' ? challenge.customSettings?.rituals : undefined;
 
-  // Live ego points : tous les logs confirmés (rituels) + bonuses des semaines scorées
-  // On n'additionne PAS weeklyScore.egoPoints car ils sont déjà comptés dans liveDailyPts
-  const confirmedLogs = logs.filter((l) => l.codeConfirmed);
-  const weeklyBonuses = weeklyScores.reduce((sum, s) => sum + s.streakBonus + s.aiBonus, 0);
+  // Only count logs from the challenge start date to avoid pre-challenge ritual points
+  const challengeLogs = logs.filter((l) => l.date >= challenge.startDate);
+  const confirmedLogs = challengeLogs.filter((l) => l.codeConfirmed);
   const liveDailyPts = confirmedLogs.reduce((sum, l) => sum + calcDayRitualPoints(l, profile.intensity, customRituals), 0);
-  const totalEgo = weeklyBonuses + liveDailyPts;
+
+  // Cumulative streak bonuses using all challenge logs (cross-week streaks)
+  const scoredWeeks = weeklyScores.map((s) => s.weekNumber);
+  const streakBonuses = scoredWeeks.length > 0
+    ? calcTotalStreakBonuses(challengeLogs, challenge.startDate, scoredWeeks, profile.intensity, customRituals)
+    : 0;
+  const aiOnlyBonuses = weeklyScores.reduce((sum, s) => sum + s.aiBonus, 0);
+  const totalEgo = liveDailyPts + streakBonuses + aiOnlyBonuses;
 
   const tier = getTier(totalEgo);
   const tierName = displayTier(tier, profile.sex);

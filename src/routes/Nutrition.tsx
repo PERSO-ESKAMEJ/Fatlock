@@ -29,17 +29,19 @@ export default function Nutrition() {
 
   const latest = getLatest(profile.id);
   const currentWeight = latest?.weightKg ?? profile.startWeight;
-  const targets = calculateTargets(profile, currentWeight, durationWeeks);
+  const s0Weight = bodyComps.find((c) => c.weekNumber === 0)?.weightKg ?? profile.startWeight;
+  const weightDirection = challenge.customSettings?.weightDirection ?? 'down';
+  const targets = calculateTargets(profile, currentWeight, durationWeeks, weightDirection);
   const macroPercents = getMacroPercents(targets);
 
   // Build weight chart data
   const weightPoints: { label: string; weight: number | undefined; target: number }[] = [
-    { label: 'S0', weight: profile.startWeight, target: profile.startWeight },
+    { label: 'S0', weight: s0Weight, target: s0Weight },
   ];
 
   for (let w = 1; w <= durationWeeks; w++) {
     const comp = bodyComps.find((c) => c.weekNumber === w);
-    const targetW = +(profile.startWeight - targets.weeklyLossKg * w).toFixed(1);
+    const targetW = +(s0Weight - targets.weeklyLossKg * w).toFixed(1);
     weightPoints.push({
       label: `S${w}`,
       weight: comp?.weightKg ?? undefined,
@@ -71,7 +73,10 @@ export default function Nutrition() {
         <div className="flex items-center justify-center gap-4 mt-3 text-xs text-[var(--muted)]">
           <span>BMR: <span className="text-[var(--ink)] font-mono">{targets.bmr}</span></span>
           <span>TDEE: <span className="text-[var(--ink)] font-mono">{targets.tdee}</span></span>
-          <span>Déficit: <span className="text-[var(--ink)] font-mono">{targets.tdee - targets.targetKcal}</span></span>
+          <span>
+            {weightDirection === 'up' ? 'Surplus' : weightDirection === 'stable' ? 'Équilibre' : 'Déficit'}:{' '}
+            <span className="text-[var(--ink)] font-mono">{Math.abs(targets.tdee - targets.targetKcal)}</span>
+          </span>
         </div>
       </div>
 
@@ -111,7 +116,11 @@ export default function Nutrition() {
           </div>
         </div>
         <div className="mt-2 text-xs text-[var(--muted)] text-center">
-          Perte cible : {targets.weeklyLossKg} kg/semaine ({(targets.weeklyLossKg * durationWeeks).toFixed(1)} kg total)
+          {weightDirection === 'stable'
+            ? 'Maintien du poids cible'
+            : weightDirection === 'up'
+              ? `Prise cible : ${Math.abs(targets.weeklyLossKg)} kg/semaine (${(Math.abs(targets.weeklyLossKg) * durationWeeks).toFixed(1)} kg total)`
+              : `Perte cible : ${targets.weeklyLossKg} kg/semaine (${(targets.weeklyLossKg * durationWeeks).toFixed(1)} kg total)`}
         </div>
         {targets.safetyFloorApplied && profile.intensity === 'flow' && (
           <p className="text-xs text-[var(--muted)] mt-2 text-center">

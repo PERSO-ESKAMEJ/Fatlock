@@ -2,29 +2,42 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface ChallengeStore {
-  codeConfirmedDates: string[];
-  confirmCode: (date: string) => void;
-  isCodeConfirmed: (date: string) => boolean;
+  codeConfirmedDates: Record<string, string[]>;
+  confirmCode: (groupKey: string, date: string) => void;
+  isCodeConfirmed: (groupKey: string, date: string) => boolean;
   reset: () => void;
 }
 
 export const useChallengeStore = create<ChallengeStore>()(
   persist(
     (set, get) => ({
-      codeConfirmedDates: [],
+      codeConfirmedDates: {},
 
-      confirmCode: (date) =>
-        set((s) => ({
-          codeConfirmedDates: s.codeConfirmedDates.includes(date)
-            ? s.codeConfirmedDates
-            : [...s.codeConfirmedDates, date],
-        })),
+      confirmCode: (groupKey, date) =>
+        set((s) => {
+          const existing = s.codeConfirmedDates[groupKey] ?? [];
+          if (existing.includes(date)) return s;
+          return {
+            codeConfirmedDates: { ...s.codeConfirmedDates, [groupKey]: [...existing, date] },
+          };
+        }),
 
-      isCodeConfirmed: (date) => get().codeConfirmedDates.includes(date),
+      isCodeConfirmed: (groupKey, date) =>
+        (get().codeConfirmedDates[groupKey] ?? []).includes(date),
 
-      reset: () => set({ codeConfirmedDates: [] }),
+      reset: () => set({ codeConfirmedDates: {} }),
     }),
-    { name: 'fatlock-challenge' }
+    {
+      name: 'fatlock-challenge',
+      version: 2,
+      migrate: (_persistedState: unknown, version: number) => {
+        if (version < 2) {
+          // v1 stored a flat string[] — discard; can't map without the group key
+          return { codeConfirmedDates: {} };
+        }
+        return _persistedState as ChallengeStore;
+      },
+    }
   )
 );
 
