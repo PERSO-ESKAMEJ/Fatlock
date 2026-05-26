@@ -177,7 +177,7 @@ export default function Settings() {
             style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
             onClick={() => {
               const base = window.location.origin + import.meta.env.BASE_URL;
-              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}`;
+              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}&cid=${challenge.id}`;
               if (challenge.supabaseUrl) link += `&sb_url=${encodeURIComponent(challenge.supabaseUrl)}`;
               if (challenge.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(challenge.supabaseAnonKey)}`;
               navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));

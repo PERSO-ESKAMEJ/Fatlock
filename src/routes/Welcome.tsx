@@ -45,6 +45,7 @@ export default function Welcome() {
   const isAdding = searchParams.get('add') === '1';
   const joinParam = (searchParams.get('join') ?? '').toUpperCase();
   const gnameParam = decodeURIComponent(searchParams.get('gname') ?? '');
+  const cidParam = searchParams.get('cid') ?? '';
   const sbUrlParam = decodeURIComponent(searchParams.get('sb_url') ?? '');
   const sbKeyParam = decodeURIComponent(searchParams.get('sb_key') ?? '');
   const hasJoinLink = joinParam.length === 6;
@@ -142,7 +143,7 @@ export default function Welcome() {
       : `CUSTOMLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`;
 
     const challenge: ChallengeConfig = {
-      id: crypto.randomUUID(),
+      id: mode === 'join' && cidParam ? cidParam : crypto.randomUUID(),
       groupName: groupName.trim() || defaultName,
       groupCode,
       groupSecret,
