@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DailyLog, BodyComposition, WeeklyScore, AIAnalysisResult } from '../types';
+import { supabase } from '../lib/supabase';
+import { useProfileStore } from './useProfileStore';
 
 interface LogStore {
   dailyLogs: DailyLog[];
@@ -27,7 +29,7 @@ export const useLogStore = create<LogStore>()(
       weeklyScores: [],
       aiResults: [],
 
-      upsertDailyLog: (log) =>
+      upsertDailyLog: (log) => {
         set((s) => {
           const idx = s.dailyLogs.findIndex(
             (l) => l.userId === log.userId && l.date === log.date
@@ -38,7 +40,21 @@ export const useLogStore = create<LogStore>()(
             return { dailyLogs: updated };
           }
           return { dailyLogs: [...s.dailyLogs, log] };
-        }),
+        });
+        // Fire-and-forget sync vers Supabase pour la récupération de compte
+        const sb = supabase();
+        const challenge = useProfileStore.getState().challenge;
+        if (sb && challenge) {
+          (async () => {
+            try {
+              await sb.from('daily_logs').upsert(
+                { challenge_id: challenge.id, user_id: log.userId, log_date: log.date, data: log, updated_at: new Date().toISOString() },
+                { onConflict: 'challenge_id,user_id,log_date' }
+              );
+            } catch { /* silencieux */ }
+          })();
+        }
+      },
 
       getDailyLog: (userId, date) =>
         get().dailyLogs.find((l) => l.userId === userId && l.date === date),

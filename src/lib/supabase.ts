@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { DailyLog, RecapFile } from '../types';
 
 let _client: SupabaseClient | null = null;
 
@@ -18,6 +19,33 @@ export async function registerGroupMember(
     { challenge_id: challengeId, user_id: userId, user_name: userName, joined_at: new Date().toISOString() },
     { onConflict: 'challenge_id,user_id' }
   );
+}
+
+export async function recoverAccount(
+  supabaseUrl: string,
+  anonKey: string,
+  challengeId: string,
+  profileId: string
+): Promise<{ recap: RecapFile | null; dailyLogs: DailyLog[] }> {
+  const sb = createClient(supabaseUrl, anonKey);
+
+  const [{ data: recapRows }, { data: logRows }] = await Promise.all([
+    sb.from('recaps')
+      .select('data')
+      .eq('challenge_id', challengeId)
+      .eq('user_id', profileId)
+      .order('week_number', { ascending: false })
+      .limit(1),
+    sb.from('daily_logs')
+      .select('data')
+      .eq('challenge_id', challengeId)
+      .eq('user_id', profileId),
+  ]);
+
+  const recap = (recapRows?.[0]?.data as RecapFile) ?? null;
+  const dailyLogs = (logRows ?? []).map((r: { data: DailyLog }) => r.data);
+
+  return { recap, dailyLogs };
 }
 
 export function clearSupabase(): void {

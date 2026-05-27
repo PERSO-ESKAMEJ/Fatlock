@@ -150,6 +150,7 @@ export default function Settings() {
     a.download = `fatlock-backup-${profile!.name.toLowerCase().replace(/\s+/g, '-')}-${getTodayStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    localStorage.setItem(`fatlock-backup-${challenge!.id}`, new Date().toISOString());
     showToast('Backup complet exporté', 'success');
   }
 
@@ -294,6 +295,20 @@ export default function Settings() {
           </div>
         </div>
         <Button size="sm" onClick={handleSaveProfile}>Enregistrer</Button>
+        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Code de récupération</div>
+          <p className="text-xs text-[var(--muted2)] mb-2">
+            Permet de récupérer ton compte via le lien d'invitation si tu perds tes données.
+          </p>
+          <button
+            className="w-full font-mono text-xs p-2 rounded-lg text-left break-all transition-all hover:opacity-80"
+            style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
+            onClick={() => navigator.clipboard.writeText(profile.id).then(() => showToast('Code copié !', 'success'))}
+          >
+            {profile.id}
+          </button>
+          <p className="text-xs text-[var(--muted2)] mt-1">Clique pour copier.</p>
+        </div>
       </div>
 
       {/* Training schedule */}
@@ -510,6 +525,26 @@ export default function Settings() {
           + Rejoindre / Créer un groupe
         </Button>
       </div>
+
+      {/* Rappel backup */}
+      {(() => {
+        const lastBackupStr = localStorage.getItem(`fatlock-backup-${challenge.id}`);
+        const daysSince = lastBackupStr ? (Date.now() - new Date(lastBackupStr).getTime()) / 86400000 : null;
+        if (lastBackupStr && daysSince !== null && daysSince <= 7) return null;
+        return (
+          <div className="mb-4 px-4 py-3 rounded-xl flex items-start gap-3" style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.25)' }}>
+            <span style={{ color: 'var(--gold)', fontSize: '1.1rem', flexShrink: 0 }}>⚠</span>
+            <div>
+              <div className="text-xs font-bold mb-0.5" style={{ color: 'var(--gold)' }}>
+                {lastBackupStr ? `Dernier backup il y a ${Math.floor(daysSince!)} jours` : 'Aucun backup effectué'}
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                Fais un backup régulièrement pour pouvoir récupérer tes données en cas de problème.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Backup / Restore */}
       <div className="panel p-4 mb-4">

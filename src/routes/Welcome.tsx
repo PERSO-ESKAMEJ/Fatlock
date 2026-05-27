@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
+import { useLogStore } from '../store/useLogStore';
 import { calculateTargets, ACTIVITY_LEVELS } from '../lib/nutrition';
-import { registerGroupMember } from '../lib/supabase';
+import { registerGroupMember, recoverAccount } from '../lib/supabase';
 import {
   UserProfile, ChallengeConfig, Sex, Intensity, DayType,
   ChallengeType, CustomRitual, CustomChallengeSettings,
@@ -57,7 +58,7 @@ export default function Welcome() {
   const csParam = searchParams.get('cs') ?? '';
   const hasJoinLink = joinParam.length === 6;
 
-  const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge'>(hasJoinLink ? 'profile' : 'landing');
+  const [step, setStep] = useState<'landing' | 'type-select' | 'profile' | 'confirm-nutrition' | 'custom-setup' | 'challenge' | 'recovery-code-display' | 'recover'>(hasJoinLink ? 'profile' : 'landing');
   const [profileStep, setProfileStep] = useState(1);
   const PROFILE_STEPS = 6;
   const [mode, setMode] = useState<'create' | 'join'>(hasJoinLink ? 'join' : 'create');
@@ -95,6 +96,11 @@ export default function Welcome() {
 
   const [hintOpen, setHintOpen] = useState(true);
   const [joinError, setJoinError] = useState('');
+  const [justCreated, setJustCreated] = useState(false);
+  const [newRecoveryCode, setNewRecoveryCode] = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
 
   // Challenge fields
   const [durationWeeks, setDurationWeeks] = useState(dwParam ? parseInt(dwParam) : 8);
@@ -198,7 +204,61 @@ export default function Welcome() {
         .catch(() => undefined);
     }
 
-    navigate('/dashboard');
+    setNewRecoveryCode(profileId);
+    setJustCreated(true);
+    setStep('recovery-code-display');
+  }
+
+  async function handleRecover() {
+    if (!sbUrlParam || !sbKeyParam || !cidParam) return;
+    setRecoveryLoading(true);
+    setRecoveryError('');
+    try {
+      const { recap, dailyLogs: recoveredLogs } = await recoverAccount(sbUrlParam, sbKeyParam, cidParam, recoveryCode.trim());
+      if (!recap) {
+        setRecoveryError('Aucun compte trouvé pour ce code. Vérifie le code et réessaie.');
+        return;
+      }
+
+      const restoredProfile = recap.profile;
+      const restoredChallenge = {
+        id: cidParam,
+        groupName: gnameParam || recap.challengeId,
+        groupCode: joinParam || '',
+        groupSecret: joinParam || '',
+        startDate: sdParam || '',
+        durationWeeks: dwParam ? parseInt(dwParam) : 8,
+        stakeAmount: stakeParam ? parseFloat(stakeParam) : 0,
+        adminId: aidParam || restoredProfile.id,
+        participantIds: [restoredProfile.id],
+        challengeType: ctParam === 'custom' ? ('custom' as const) : ('fatlock' as const),
+        supabaseUrl: sbUrlParam || undefined,
+        supabaseAnonKey: sbKeyParam || undefined,
+      };
+
+      addEntry(restoredProfile, restoredChallenge);
+
+      // Fusionne les logs du récap + les logs récents (les plus récents priment)
+      const logMap = new Map<string, (typeof recap.dailyLogs)[0]>();
+      for (const log of recap.dailyLogs) logMap.set(log.date, log);
+      for (const log of recoveredLogs) logMap.set(log.date, log);
+      const allLogs = [...logMap.values()];
+
+      useLogStore.setState((s) => {
+        const otherId = restoredProfile.id;
+        return {
+          dailyLogs: [...s.dailyLogs.filter((l) => l.userId !== otherId), ...allLogs],
+          bodyCompositions: [...s.bodyCompositions.filter((c) => c.userId !== otherId), ...recap.bodyCompositions],
+          weeklyScores: [...s.weeklyScores.filter((ws) => ws.userId !== otherId), ...recap.weeklyScores],
+        };
+      });
+
+      navigate('/dashboard');
+    } catch {
+      setRecoveryError('Erreur lors de la récupération. Vérifie ta connexion et réessaie.');
+    } finally {
+      setRecoveryLoading(false);
+    }
   }
 
   const tempProfile = name && age && height && weight
@@ -208,7 +268,7 @@ export default function Welcome() {
     ? calculateTargets({ ...tempProfile, id: '', name, startWeight: parseFloat(weight), trainingDays, groupCode: '', isAdmin: false, createdAt: '' }, parseFloat(weight), durationWeeks)
     : null;
 
-  if (profile && !isAdding) {
+  if (profile && !isAdding && !justCreated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
         <div className="text-center mb-10">
@@ -251,6 +311,11 @@ export default function Welcome() {
           <Button size="lg" variant="ghost" onClick={() => { setMode('join'); setStep('profile'); setProfileStep(1); }}>
             Rejoindre un challenge
           </Button>
+          {hasJoinLink && sbUrlParam && sbKeyParam && (
+            <Button size="lg" variant="ghost" onClick={() => setStep('recover')}>
+              🔑 Récupérer mon compte
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -944,6 +1009,97 @@ export default function Welcome() {
           >
             {mode === 'create' ? 'Lancer le challenge' : 'Je m\'engage — Rejoindre'}
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Code de récupération — affiché une seule fois après la création du compte
+  if (step === 'recovery-code-display') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 max-w-sm mx-auto animate-fade-in">
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-4">🔑</div>
+          <h1 className="font-display text-2xl uppercase tracking-wider mb-2" style={{ color: 'var(--ink)' }}>
+            Ton code de récupération
+          </h1>
+          <p className="text-sm text-[var(--muted)]">
+            Note ce code dans un endroit sûr. Si tu perds accès à l'app, il te permettra de récupérer ton compte et toutes tes données via le lien d'invitation.
+          </p>
+        </div>
+
+        <div className="w-full panel p-4 mb-4">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">Ton code</div>
+          <button
+            className="w-full font-mono text-xs p-3 rounded-lg text-left break-all transition-all hover:opacity-80"
+            style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--blue)' }}
+            onClick={() => navigator.clipboard.writeText(newRecoveryCode)}
+          >
+            {newRecoveryCode}
+          </button>
+          <p className="text-xs text-[var(--muted2)] mt-2">Clique pour copier. Ce code est aussi visible dans Paramètres.</p>
+        </div>
+
+        <div className="w-full p-3 rounded-lg mb-6 text-xs" style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)', color: 'var(--muted)' }}>
+          <span style={{ color: 'var(--gold)' }}>⚠ </span>
+          Ce code ne peut pas être retrouvé si tu perds l'accès à l'app <span className="font-bold" style={{ color: 'var(--ink)' }}>sans l'avoir noté</span>. Sauvegarde-le dans tes notes, par SMS à toi-même, ou dans ton gestionnaire de mots de passe.
+        </div>
+
+        <Button className="w-full" size="lg" onClick={() => navigate('/dashboard')}>
+          J'ai noté mon code →
+        </Button>
+      </div>
+    );
+  }
+
+  // Récupération de compte
+  if (step === 'recover') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 max-w-sm mx-auto animate-fade-in">
+        <button onClick={() => setStep('landing')} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] mb-8 self-start">
+          ← Retour
+        </button>
+
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-4">🔑</div>
+          <h1 className="font-display text-2xl uppercase tracking-wider mb-2" style={{ color: 'var(--ink)' }}>
+            Récupérer mon compte
+          </h1>
+          <p className="text-sm text-[var(--muted)]">
+            Entre le code de récupération noté lors de la création de ton compte.
+          </p>
+        </div>
+
+        <div className="w-full space-y-4">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Code de récupération</label>
+            <input
+              type="text"
+              value={recoveryCode}
+              onChange={(e) => setRecoveryCode(e.target.value.trim())}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="font-mono text-sm mt-1"
+              autoFocus
+            />
+          </div>
+
+          {recoveryError && (
+            <p className="text-xs font-bold text-center" style={{ color: 'var(--red)' }}>{recoveryError}</p>
+          )}
+
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleRecover}
+            disabled={recoveryCode.length < 10 || recoveryLoading}
+            loading={recoveryLoading}
+          >
+            Récupérer mon compte →
+          </Button>
+
+          <p className="text-xs text-center text-[var(--muted2)]">
+            La récupération restaure toutes tes données jusqu'au dernier check-in hebdomadaire et tous tes logs quotidiens synchronisés.
+          </p>
         </div>
       </div>
     );

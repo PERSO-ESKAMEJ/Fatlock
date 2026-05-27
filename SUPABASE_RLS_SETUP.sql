@@ -191,7 +191,29 @@ CREATE POLICY "em_delete" ON excluded_members FOR DELETE TO anon USING (true);
 
 
 -- ────────────────────────────────────────────────────────────
--- 6. Index utiles pour les performances
+-- 6. Table "daily_logs"
+-- ────────────────────────────────────────────────────────────
+-- Sync en temps réel des logs quotidiens pour permettre la récupération de compte.
+-- Upsert à chaque modification d'un log journalier côté client.
+
+CREATE TABLE IF NOT EXISTS daily_logs (
+  challenge_id  TEXT        NOT NULL,
+  user_id       TEXT        NOT NULL,
+  log_date      TEXT        NOT NULL,
+  data          JSONB       NOT NULL,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (challenge_id, user_id, log_date)
+);
+
+ALTER TABLE daily_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "dl_select" ON daily_logs FOR SELECT TO anon USING (true);
+CREATE POLICY "dl_insert" ON daily_logs FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "dl_update" ON daily_logs FOR UPDATE TO anon USING (true) WITH CHECK (true);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 7. Index utiles pour les performances
 -- ────────────────────────────────────────────────────────────
 
 -- Accélère la lecture des récaps par groupe (requête principale de l'admin)
@@ -199,6 +221,9 @@ CREATE INDEX IF NOT EXISTS idx_recaps_challenge_id ON recaps (challenge_id);
 
 -- Accélère la recherche du dernier récap d'un participant
 CREATE INDEX IF NOT EXISTS idx_recaps_user_week ON recaps (challenge_id, user_id, week_number DESC);
+
+-- Accélère la récupération des logs quotidiens d'un participant (récupération de compte)
+CREATE INDEX IF NOT EXISTS idx_daily_logs_user ON daily_logs (challenge_id, user_id);
 
 
 -- ============================================================
