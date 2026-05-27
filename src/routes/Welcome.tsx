@@ -393,7 +393,7 @@ export default function Welcome() {
       2: 'Ce nom apparaîtra dans le classement du groupe. Tu peux utiliser un pseudo — il ne sera pas modifiable facilement après.',
       3: 'Ces trois données calculent ton BMR (calories brûlées au repos) et ton TDEE (dépense totale journalière). Plus c\'est précis, plus ton plan nutritionnel sera juste.',
       4: 'Ton niveau d\'activité hors entraînements FATLOCK. Il multiplie ton BMR pour obtenir ton TDEE réel. Une erreur ici sous- ou sur-estime tes besoins caloriques.',
-      5: 'Définit la vitesse de ta transformation et ton multiplicateur de points. SAFE = progression douce. STANDARD = protocole complet. FLOW = mode extrême, l\'IA est plus sévère et un écart te coûte plus cher en points.',
+      5: 'Définit ton déficit calorique et le multiplicateur de points — et aussi ta place dans le classement. Le score composite est normalisé par rapport à ton plafond d\'intensité (SAFE→850, STANDARD→910, FLOW→1000 pts max). Un joueur SAFE parfait à 100% bat un joueur FLOW à moins de 85%. Choisir FLOW ne garantit pas la victoire : il faut honorer l\'exigence pour que l\'avantage soit réel.',
       6: 'Sert à déterminer quels rituels s\'appliquent chaque jour (séance muscu vs cardio vs repos). Modifiable à tout moment dans Paramètres.',
     };
 

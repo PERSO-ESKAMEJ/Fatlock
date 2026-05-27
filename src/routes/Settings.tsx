@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useChallengeStore } from '../store/useChallengeStore';
@@ -42,6 +43,7 @@ export default function Settings() {
   });
   const [showReset, setShowReset] = useState(false);
   const [showResetAll, setShowResetAll] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<Record<string, unknown> | null>(null);
   const [members, setMembers] = useState<{ user_id: string; user_name: string; joined_at: string }[]>([]);
@@ -88,6 +90,19 @@ export default function Settings() {
   }
 
   const todayCode = getDailyCode(challenge.groupSecret, getTodayStr());
+
+  function buildInviteLink(): string {
+    const c = challenge!;
+    const base = window.location.origin + import.meta.env.BASE_URL;
+    const dw = c.durationWeeks ?? c.customSettings?.durationWeeks ?? 8;
+    let link = `${base}?join=${c.groupCode}&gname=${encodeURIComponent(c.groupName)}&cid=${c.id}&sd=${c.startDate}&dw=${dw}&stake=${c.stakeAmount}&aid=${c.adminId}`;
+    if (c.challengeType === 'custom' && c.customSettings) {
+      link += `&ct=custom&cs=${encodeURIComponent(JSON.stringify(c.customSettings))}`;
+    }
+    if (c.supabaseUrl) link += `&sb_url=${encodeURIComponent(c.supabaseUrl)}`;
+    if (c.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(c.supabaseAnonKey)}`;
+    return link;
+  }
 
   function handleSaveProfile() {
     const parsedAge = parseInt(age);
@@ -362,25 +377,32 @@ export default function Settings() {
         </div>
         {profile.isAdmin && (
         <div className="mt-3 pt-3 border-t border-[var(--border)]">
-          <div className="text-xs text-[var(--muted)] mb-1">Lien d'invitation</div>
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs text-[var(--muted)]">Lien d'invitation</div>
+            <button
+              onClick={() => setShowQR((v) => !v)}
+              className="text-xs px-2 py-1 rounded transition-all hover:opacity-80"
+              style={{ background: showQR ? 'var(--blue)' : 'var(--panel2)', color: showQR ? 'white' : 'var(--muted)', border: '1px solid var(--border)' }}
+            >
+              {showQR ? 'Masquer QR' : 'QR Code'}
+            </button>
+          </div>
           <button
             className="w-full text-left font-mono text-xs p-2 rounded break-all transition-all hover:opacity-80"
             style={{ background: 'var(--panel2)', color: 'var(--blue-bright)', border: '1px solid var(--border)' }}
-            onClick={() => {
-              const base = window.location.origin + import.meta.env.BASE_URL;
-              const dw = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
-              let link = `${base}?join=${challenge.groupCode}&gname=${encodeURIComponent(challenge.groupName)}&cid=${challenge.id}&sd=${challenge.startDate}&dw=${dw}&stake=${challenge.stakeAmount}&aid=${challenge.adminId}`;
-              if (challenge.challengeType === 'custom' && challenge.customSettings) {
-                link += `&ct=custom&cs=${encodeURIComponent(JSON.stringify(challenge.customSettings))}`;
-              }
-              if (challenge.supabaseUrl) link += `&sb_url=${encodeURIComponent(challenge.supabaseUrl)}`;
-              if (challenge.supabaseAnonKey) link += `&sb_key=${encodeURIComponent(challenge.supabaseAnonKey)}`;
-              navigator.clipboard.writeText(link).then(() => showToast('Lien copié !', 'success'));
-            }}
+            onClick={() => navigator.clipboard.writeText(buildInviteLink()).then(() => showToast('Lien copié !', 'success'))}
           >
             ?join={challenge.groupCode}&gname={encodeURIComponent(challenge.groupName)}{challenge.supabaseUrl ? ' +supabase' : ''}
           </button>
           <p className="text-xs text-[var(--muted2)] mt-1">Clique pour copier. Partage ce lien aux participants.</p>
+          {showQR && (
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <div className="p-3 rounded-xl" style={{ background: 'white' }}>
+                <QRCodeSVG value={buildInviteLink()} size={200} />
+              </div>
+              <p className="text-xs text-[var(--muted2)] text-center">Scanne ce QR code pour rejoindre le challenge sans copier le lien.</p>
+            </div>
+          )}
           {challenge.supabaseAnonKey && (
             <div className="mt-2 px-2 py-1.5 rounded text-xs" style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)', color: 'var(--muted)' }}>
               <span style={{ color: 'var(--gold)' }}>⚠</span> Ce lien contient ta clé Supabase anon. Elle est publique par nature mais ne la partage qu'avec les participants de confiance.

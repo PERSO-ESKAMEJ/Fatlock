@@ -30,6 +30,15 @@ const RITUAL_POINTS: Record<string, number> = {
   cardio_extra: 15,
 };
 
+// Plafond ego normalisé par intensité dans le score composite.
+// Dérivé du breakeven FLOW/SAFE à 85% : 0.85 × 1000 = 850.
+// STANDARD interpolé à 40% du chemin SAFE→FLOW (position du multiplicateur 1.4 dans [1.0, 2.0]).
+export const INTENSITY_CEILING: Record<Intensity, number> = {
+  safe: 850,
+  standard: 910,
+  flow: 1000,
+};
+
 export function calcDayRitualPoints(log: DailyLog, intensity: Intensity, customRituals?: CustomRitual[]): number {
   if (customRituals && customRituals.length > 0) {
     let raw = 0;
@@ -80,8 +89,6 @@ export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, custom
 
 export function calcAIBonus(credibilityScore: number | null, intensity: Intensity = 'standard'): number {
   if (credibilityScore === null) return 0;
-  // Score IA = signal secondaire, pas facteur déterminant
-  // Malus significatif uniquement pour triche flagrante (<40), bonus modéré pour crédibilité élevée
   if (intensity === 'flow') {
     if (credibilityScore >= 85) return 20;
     if (credibilityScore >= 65) return 10;
@@ -96,7 +103,6 @@ export function calcAIBonus(credibilityScore: number | null, intensity: Intensit
     if (credibilityScore >= 25) return -15;
     return -25;
   }
-  // safe
   if (credibilityScore >= 85) return 10;
   if (credibilityScore >= 65) return 5;
   if (credibilityScore >= 45) return 0;
@@ -112,15 +118,9 @@ export function calcTransformationScore(
   if (!startCompo || !currentCompo) return 0;
   const fatLostKg = startCompo.fatMassKg - currentCompo.fatMassKg;
   const muscleGainedKg = currentCompo.muscleMassKg - startCompo.muscleMassKg;
-
-  // Caps physiologiques proportionnels à la durée :
-  // graisse : max ~1 % du poids/semaine × durationWeeks
-  // muscle  : max ~0.1875 kg/semaine × durationWeeks (~1.5 kg sur 8 semaines)
   const fatCapKg = startCompo.weightKg * 0.015 * durationWeeks;
   const fatLostCapped = Math.min(Math.max(0, fatLostKg), fatCapKg);
   const muscleGainedCapped = Math.min(Math.max(0, muscleGainedKg), 0.1875 * durationWeeks);
-
-  // 10 pts par 500 g de graisse perdue, 15 pts par 500 g de muscle gagné
   const fatScore = Math.round((fatLostCapped / 0.5) * 10);
   const muscleScore = Math.round((muscleGainedCapped / 0.5) * 15);
   return fatScore + muscleScore;
@@ -132,23 +132,41 @@ export function calcRegularityScore(logs: DailyLog[], totalDays: number): number
   return Math.round((confirmedDays / totalDays) * 100);
 }
 
+// Somme des points ego maximaux atteignables pour un ensemble de logs.
+// Sert à normaliser le score composite par rapport au potentiel réel du joueur.
+export function calcMaxEgoPoints(
+  logs: DailyLog[],
+  intensity: Intensity,
+  customRituals?: CustomRitual[]
+): number {
+  if (customRituals && customRituals.length > 0) {
+    const maxRawPerDay = customRituals.reduce((sum, r) => sum + r.points * 10, 0);
+    const maxPerDay = Math.round(maxRawPerDay * INTENSITY_MULTIPLIER[intensity]);
+    return maxPerDay * logs.length;
+  }
+  return logs.reduce((sum, log) => {
+    const maxRaw = getMaxPointsForDay(log.dayType ?? 'repos', intensity);
+    return sum + Math.round(maxRaw * INTENSITY_MULTIPLIER[intensity]);
+  }, 0);
+}
+
 export function calcCompositeScore(
   egoPoints: number,
   transformationScore: number,
-  regularityPercent: number
+  regularityPercent: number,
+  maxEgoPoints?: number,
+  intensity?: Intensity
 ): number {
-  // Pondération : 50 % effort quotidien (ego) · 25 % transformation · 25 % régularité
-  //
-  // Normalisations pour ramener les trois composantes sur une plage similaire :
-  //   egoPoints      : 0–5 000 sur 8 semaines (all-in FLOW) → divisé par 5 → 0–1 000
-  //   transformScore : 0–150 après le cap physiologique      → ×(1 000/150) ≈ ×6,67 → 0–1 000
-  //   regularityPct  : 0–100                                 → ×10 → 0–1 000
-  //
-  // Avec cette normalisation, chaque composante contribue au maximum ~250 pts finaux.
-  const egoNorm   = Math.min(egoPoints, 5000) / 5;
+  // Avec maxEgoPoints + intensity : normalisation par rapport au potentiel × plafond d'intensité.
+  // Sans : fallback absolu (rétro-compatibilité).
+  let egoNorm: number;
+  if (maxEgoPoints != null && maxEgoPoints > 0 && intensity != null) {
+    egoNorm = Math.min(egoPoints / maxEgoPoints, 1) * INTENSITY_CEILING[intensity];
+  } else {
+    egoNorm = Math.min(egoPoints, 5000) / 5;
+  }
   const transNorm = Math.min(transformationScore, 150) * (1000 / 150);
   const regNorm   = regularityPercent * 10;
-
   return Math.round(egoNorm * 0.5 + transNorm * 0.25 + regNorm * 0.25);
 }
 
@@ -217,10 +235,13 @@ export function buildWeeklyScore(
   const aiBonus = calcAIBonus(credibilityScore, intensity);
   const transformationScore = calcTransformationScore(startCompo, currentCompo, durationWeeks);
   const regularityScore = calcRegularityScore(logs, totalDays);
+  const maxEgoPoints = calcMaxEgoPoints(logs, intensity, customRituals);
   const totalComposite = calcCompositeScore(
     egoPoints + streakBonus + aiBonus,
     transformationScore,
-    regularityScore
+    regularityScore,
+    maxEgoPoints,
+    intensity
   );
 
   return {

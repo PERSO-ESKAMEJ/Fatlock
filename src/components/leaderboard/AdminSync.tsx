@@ -3,7 +3,7 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
-import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses } from '../../lib/scoring';
+import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints } from '../../lib/scoring';
 import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
 import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
@@ -149,6 +149,9 @@ export default function AdminSync() {
 
         // Composite score for ranking: use current week's check-in if available, else synthesize from daily logs
         const currentWeekScore = rScores.find((s) => s.weekNumber === currentWeek);
+        const { start: cwStart, end: cwEnd } = weekRange(currentWeek);
+        const cwLogs = rLogs.filter((l) => l.date >= cwStart && l.date < cwEnd);
+        const maxEgo = calcMaxEgoPoints(cwLogs, rProfile.intensity, customRituals);
         let composite: number;
         let weekRegularity: number;
         let weekTransformation: number;
@@ -157,13 +160,13 @@ export default function AdminSync() {
           composite = calcCompositeScore(
             currentWeekScore.egoPoints + currentWeekScore.streakBonus + currentWeekScore.aiBonus,
             currentWeekScore.transformationScore,
-            currentWeekScore.regularityScore
+            currentWeekScore.regularityScore,
+            maxEgo,
+            rProfile.intensity
           );
           weekRegularity = currentWeekScore.regularityScore;
           weekTransformation = currentWeekScore.transformationScore;
         } else {
-          const { start, end } = weekRange(currentWeek);
-          const cwLogs = rLogs.filter((l) => l.date >= start && l.date < end);
           const cwEgo = cwLogs.reduce(
             (sum, l) => sum + calcDayRitualPoints(l, rProfile.intensity, customRituals),
             0
@@ -171,7 +174,7 @@ export default function AdminSync() {
           weekRegularity = calcRegularityScore(cwLogs, 7);
           const sortedRScores = [...rScores].sort((a, b) => a.weekNumber - b.weekNumber);
           weekTransformation = sortedRScores[sortedRScores.length - 1]?.transformationScore ?? 0;
-          composite = calcCompositeScore(cwEgo, weekTransformation, weekRegularity);
+          composite = calcCompositeScore(cwEgo, weekTransformation, weekRegularity, maxEgo, rProfile.intensity);
         }
 
         entries.push({
