@@ -405,6 +405,70 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
         </div>
       </div>
 
+      {/* ── Vote final ───────────────────────────────────────────────────────── */}
+      <div className="p-5 rounded-xl" style={{ background: 'rgba(255,77,94,0.06)', border: '1px solid rgba(255,77,94,0.25)' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xl">🗳️</span>
+          <div className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--red)' }}>
+            Le vote final — ce qui décide vraiment
+          </div>
+        </div>
+        <p className="text-xs text-[var(--muted)] leading-relaxed mb-4">
+          Le classement hebdomadaire <strong className="text-[var(--ink)]">ne détermine pas le gagnant</strong>.
+          C'est le <strong className="text-[var(--ink)]">vote entre participants</strong> à la fin du challenge qui décide qui emporte la mise.
+        </p>
+
+        {/* Flow */}
+        <div className="space-y-3 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+              style={{ background: 'rgba(255,77,94,0.2)', color: 'var(--red)' }}>1</div>
+            <div>
+              <div className="text-xs font-bold text-[var(--ink)] mb-0.5">Photos anonymes S0 → S{challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8}</div>
+              <div className="text-xs text-[var(--muted)] leading-relaxed">Chaque participant voit les transformations de tout le monde, <strong className="text-[var(--ink)]">sans noms</strong>. Tu votes pour la transformation la plus impressionnante.</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+              style={{ background: 'rgba(255,77,94,0.2)', color: 'var(--red)' }}>2</div>
+            <div>
+              <div className="text-xs font-bold text-[var(--ink)] mb-0.5">L'IA analyse la transformation finale</div>
+              <div className="text-xs text-[var(--muted)] leading-relaxed">L'IA compare tes photos de départ et d'arrivée, et donne un score de transformation. Ce score est <strong className="text-[var(--ink)]">pondéré par ta crédibilité hebdomadaire</strong> — si tu n'as pas suivi sérieusement, l'IA penalise.</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+              style={{ background: 'rgba(255,77,94,0.2)', color: 'var(--red)' }}>3</div>
+            <div>
+              <div className="text-xs font-bold text-[var(--ink)] mb-0.5">Top 25% du classement = bonus</div>
+              <div className="text-xs text-[var(--muted)] leading-relaxed">Finir dans le top 25% des scores composites hebdomadaires ajoute <strong className="text-[var(--ink)]">+5 pts</strong> au score final.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Score formula */}
+        <div className="p-3 rounded-lg mb-3" style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}>
+          <div className="text-xs font-bold text-[var(--ink)] mb-2 text-center">Score final</div>
+          <div className="flex items-center justify-center gap-2 flex-wrap text-xs font-mono">
+            <span className="px-2 py-1 rounded font-bold" style={{ background: 'rgba(255,77,94,0.15)', color: 'var(--red)' }}>Votes %</span>
+            <span className="text-[var(--muted)]">+</span>
+            <span className="px-2 py-1 rounded" style={{ background: 'rgba(47,123,255,0.15)', color: 'var(--blue-bright)' }}>Bonus IA</span>
+            <span className="text-[var(--muted)]">+</span>
+            <span className="px-2 py-1 rounded" style={{ background: 'rgba(47,227,154,0.15)', color: 'var(--green)' }}>+5 top 25%</span>
+          </div>
+          <div className="mt-2 text-xs text-center text-[var(--muted2)]">
+            Les votes des participants sont le facteur dominant (0–100 pts)
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2 p-2 rounded-lg" style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)' }}>
+          <span className="flex-shrink-0 mt-0.5">💡</span>
+          <p className="text-xs text-[var(--muted)] leading-relaxed">
+            <strong className="text-[var(--ink)]">Stratégie :</strong> le classement hebdomadaire construit ta crédibilité et peut t'offrir le bonus +5, mais c'est la <strong className="text-[var(--ink)]">transformation visible</strong> que tes pairs voteront qui gagne réellement la mise.
+          </p>
+        </div>
+      </div>
+
       {/* ── Mise en jeu ──────────────────────────────────────────────────────── */}
       {challenge.stakeAmount > 0 && (
         <div
