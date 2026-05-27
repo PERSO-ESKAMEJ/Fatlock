@@ -15,12 +15,27 @@ export default function FireBackground() {
       };
     };
 
+    const onTouch = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      targetRef.current = {
+        x: touch.clientX / window.innerWidth,
+        y: touch.clientY / window.innerHeight,
+      };
+    };
+
     window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('touchmove', onTouch, { passive: true });
 
     const tick = () => {
+      // Pause when tab is hidden
+      if (document.hidden) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
       const t = currentRef.current;
       const m = targetRef.current;
-      // Smooth lerp toward mouse position
       t.x += (m.x - t.x) * 0.04;
       t.y += (m.y - t.y) * 0.04;
 
@@ -37,6 +52,7 @@ export default function FireBackground() {
 
     return () => {
       window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onTouch);
       cancelAnimationFrame(rafRef.current);
     };
   }, []);
