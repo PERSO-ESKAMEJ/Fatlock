@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getChallengeState } from '../store/useChallengeStore';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useChallengeStore } from '../store/useChallengeStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { DayType, UserProfile, ChallengeConfig } from '../types';
+import { DayType, UserProfile, ChallengeConfig, Intensity } from '../types';
 import PageWrapper from '../components/layout/PageWrapper';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -33,7 +34,12 @@ export default function Settings() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const durationWeeks = challenge?.durationWeeks ?? challenge?.customSettings?.durationWeeks ?? 8;
+  const challengeState = challenge ? getChallengeState(challenge.startDate, durationWeeks) : 'pending';
+  const isLocked = challengeState !== 'pending';
+
   const [age, setAge] = useState(profile?.age?.toString() ?? '');
+  const [intensity, setIntensity] = useState<Intensity>(profile?.intensity ?? 'standard');
   const [apiKey, setApiKey] = useState(challenge?.anthropicApiKey ?? '');
   const [supabaseUrl, setSupabaseUrl] = useState(challenge?.supabaseUrl ?? '');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(challenge?.supabaseAnonKey ?? '');
@@ -110,7 +116,9 @@ export default function Settings() {
       showToast('Âge invalide', 'error');
       return;
     }
-    updateProfile({ age: parsedAge });
+    const updates: Partial<UserProfile> = { age: parsedAge };
+    if (!isLocked) updates.intensity = intensity;
+    updateProfile(updates);
     showToast('Profil mis à jour', 'success');
   }
 
@@ -308,6 +316,49 @@ export default function Settings() {
             <label>Sexe — immutable</label>
             <input type="text" value={profile.sex === 'M' ? 'Homme' : 'Femme'} disabled className="opacity-40 cursor-not-allowed" />
           </div>
+        </div>
+        {/* Intensité — modifiable avant le J1 seulement */}
+        <div className="mb-3 pt-3 border-t border-[var(--border)]">
+          <div className="flex items-center justify-between mb-2">
+            <label className="mb-0">Rythme d'intensité</label>
+            {isLocked && (
+              <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(255,200,0,0.1)', color: 'var(--gold)', border: '1px solid rgba(255,200,0,0.3)' }}>
+                🔒 Figé au J1
+              </span>
+            )}
+          </div>
+          {isLocked ? (
+            <div
+              className="w-full p-3 rounded-lg font-display text-lg uppercase tracking-wider font-bold"
+              style={{
+                background: 'var(--panel2)', border: '1px solid var(--border)', opacity: 0.6, cursor: 'not-allowed',
+                color: intensity === 'safe' ? 'var(--safe)' : intensity === 'standard' ? 'var(--standard)' : 'var(--flow)',
+              }}
+            >
+              {intensity === 'safe' ? 'SÛRE' : intensity === 'standard' ? 'STANDARD' : 'FLOW'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'safe'    as Intensity, label: 'SÛRE',     color: 'var(--safe)',     mult: '×1.0' },
+                { value: 'standard'as Intensity, label: 'STANDARD', color: 'var(--standard)', mult: '×1.4' },
+                { value: 'flow'    as Intensity, label: 'FLOW',     color: 'var(--flow)',     mult: '×2.0' },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setIntensity(opt.value)}
+                  className="p-2 rounded-lg text-center transition-all"
+                  style={{
+                    background: intensity === opt.value ? `color-mix(in srgb, ${opt.color} 15%, transparent)` : 'var(--panel2)',
+                    border: `2px solid ${intensity === opt.value ? opt.color : 'var(--border)'}`,
+                  }}
+                >
+                  <div className="font-display text-xs uppercase font-bold" style={{ color: opt.color }}>{opt.label}</div>
+                  <div className="font-mono text-xs" style={{ color: opt.color }}>{opt.mult}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <Button size="sm" onClick={handleSaveProfile}>Enregistrer</Button>
         <div className="mt-3 pt-3 border-t border-[var(--border)]">

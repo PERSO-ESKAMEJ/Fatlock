@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { ChallengeConfig, UserProfile, Intensity } from '../../types';
 import { getRitualsForDay } from '../../constants/rituals';
 import { INTENSITY_MULTIPLIER } from '../../lib/nutrition';
 import { INTENSITY_CEILING } from '../../lib/scoring';
+import { useProfileStore } from '../../store/useProfileStore';
 
 const INTENSITY_META: Record<Intensity, {
   label: string; color: string; bg: string; border: string;
@@ -48,6 +50,9 @@ interface Props {
 }
 
 export default function PrelaunchGuide({ challenge, profile }: Props) {
+  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const [editingIntensity, setEditingIntensity] = useState(false);
+
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const im = INTENSITY_META[profile.intensity];
   const mult = INTENSITY_MULTIPLIER[profile.intensity];
@@ -172,6 +177,61 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
         <p className="text-xs text-[var(--muted2)] mt-3 leading-relaxed">
           Le classement est <strong className="text-[var(--ink)]">normalisé par rapport à ton plafond</strong>. Un joueur SÛRE à 100 % bat un joueur FLOW à moins de 85 %. Choisir FLOW ne garantit pas la victoire : il faut l'honorer.
         </p>
+
+        {/* ── Sélecteur de rythme inline ── */}
+        <div className="mt-4 pt-4 border-t border-[var(--border)]">
+          {!editingIntensity ? (
+            <button
+              onClick={() => setEditingIntensity(true)}
+              className="w-full py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-80"
+              style={{ background: im.bg, border: `1px solid ${im.border}`, color: im.color }}
+            >
+              Changer de rythme →
+            </button>
+          ) : (
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-2">
+                Choisis ton rythme
+              </div>
+              <div className="space-y-2">
+                {(['safe', 'standard', 'flow'] as Intensity[]).map((opt) => {
+                  const meta = INTENSITY_META[opt];
+                  const selected = profile.intensity === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => { updateProfile({ intensity: opt }); setEditingIntensity(false); }}
+                      className="w-full p-3 rounded-xl text-left transition-all"
+                      style={{
+                        background: selected ? meta.bg : 'var(--panel2)',
+                        border: `2px solid ${selected ? meta.color : 'var(--border)'}`,
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-display text-base uppercase tracking-wider" style={{ color: meta.color }}>
+                          {meta.label}
+                        </span>
+                        <span className="font-mono text-sm font-bold" style={{ color: meta.color }}>
+                          {meta.mult}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">{meta.tagline}</div>
+                      {opt === 'standard' && (
+                        <div className="text-xs font-bold mt-1" style={{ color: 'var(--blue-bright)' }}>★ Recommandé</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setEditingIntensity(false)}
+                className="mt-2 text-xs text-[var(--muted)] w-full text-center hover:text-[var(--ink)] transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Rituels ──────────────────────────────────────────────────────────── */}
@@ -361,6 +421,36 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── Paramètres figés au J1 ───────────────────────────────────────────── */}
+      <div
+        className="p-4 rounded-xl flex items-start gap-3"
+        style={{ background: 'rgba(255,200,0,0.06)', border: '1px solid rgba(255,200,0,0.25)' }}
+      >
+        <span className="text-xl flex-shrink-0">🔒</span>
+        <div>
+          <div className="text-xs font-bold mb-1.5" style={{ color: 'var(--gold)' }}>
+            Figé au démarrage
+          </div>
+          <p className="text-xs text-[var(--muted)] leading-relaxed mb-2">
+            Une fois le J1 passé, ces paramètres ne pourront plus être modifiés :
+          </p>
+          <ul className="text-xs text-[var(--muted)] space-y-1 mb-2">
+            <li className="flex items-center gap-2">
+              <span style={{ color: 'var(--red)' }}>✕</span>
+              <span><strong className="text-[var(--ink)]">Rythme d'intensité</strong> (SÛRE / STANDARD / FLOW)</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span style={{ color: 'var(--red)' }}>✕</span>
+              <span><strong className="text-[var(--ink)]">Poids et taille de départ</strong> (S0 — mesures de référence)</span>
+            </li>
+          </ul>
+          <p className="text-xs text-[var(--muted2)]">
+            Le planning d'entraînement, l'âge et le nom restent modifiables à tout moment dans{' '}
+            <strong className="text-[var(--ink)]">Paramètres</strong>.
+          </p>
+        </div>
+      </div>
 
       {/* ── Règle d'or ───────────────────────────────────────────────────────── */}
       <div
