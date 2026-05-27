@@ -8,6 +8,7 @@ import CountdownBar from '../components/dashboard/CountdownBar';
 import NutritionSnapshot from '../components/dashboard/NutritionSnapshot';
 import TodaySummary from '../components/dashboard/TodaySummary';
 import { getChallengeState, getCurrentWeek, getDaysUntilStart } from '../store/useChallengeStore';
+import PrelaunchGuide from '../components/dashboard/PrelaunchGuide';
 
 export default function Dashboard() {
   const profile = useProfileStore((s) => s.profile)!;
@@ -71,29 +72,7 @@ export default function Dashboard() {
           <span className="text-2xl flex-shrink-0">{s0Done ? '✅' : '📏'}</span>
         </div>
 
-        {/* Group info */}
-        <div className="panel p-4 mb-4">
-          <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">Groupe</div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Nom</span>
-              <span className="font-bold">{challenge.groupName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Code</span>
-              <span className="font-mono font-bold" style={{ color: 'var(--blue-bright)' }}>{challenge.groupCode}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Mise en jeu</span>
-              <span className="font-mono">{challenge.stakeAmount} €</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg text-xs text-center text-[var(--muted)]"
-          style={{ background: 'var(--panel2)', border: '1px solid var(--border)' }}>
-          Les rituels s'activent au J1. Utilise ce temps pour enregistrer tes mesures de départ S0.
-        </div>
+        <PrelaunchGuide challenge={challenge} profile={profile} />
       </PageWrapper>
     );
   }
