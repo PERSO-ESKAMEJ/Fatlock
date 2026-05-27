@@ -3,7 +3,7 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
-import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints } from '../../lib/scoring';
+import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints, calcAIBonus } from '../../lib/scoring';
 import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
 import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
@@ -22,7 +22,7 @@ interface RecapStatus {
 export default function AdminSync() {
   const challenge = useProfileStore((s) => s.challenge)!;
   const profile = useProfileStore((s) => s.profile)!;
-  const { addAIResult, dailyLogs, bodyCompositions, weeklyScores } = useLogStore();
+  const { addAIResult, dailyLogs, bodyCompositions, weeklyScores, aiResults } = useLogStore();
   const setMasterLeaderboard = useLeaderboardStore((s) => s.setMasterLeaderboard);
   const masterLeaderboard = useLeaderboardStore((s) => s.masterLeaderboard);
   const { showToast } = useToast();
@@ -143,7 +143,11 @@ export default function AdminSync() {
         const totalStreakBonuses = calcTotalStreakBonuses(
           rLogs, challenge.startDate, allWeeksWithLogs, rProfile.intensity, customRituals
         );
-        const aiOnlyBonuses = rScores.reduce((sum, s) => sum + s.aiBonus, 0);
+        // Bonus IA : utilise les AIAnalysisResult stockés localement si disponibles (plus précis que WeeklyScore.aiBonus qui est toujours 0 côté participant)
+        const aiOnlyBonuses = rScores.reduce((sum, s) => {
+          const stored = aiResults.find((r) => r.userId === rProfile.id && r.weekNumber === s.weekNumber);
+          return sum + (stored ? calcAIBonus(stored.credibilityScore, rProfile.intensity) : s.aiBonus);
+        }, 0);
 
         const totalEgo = liveDailyEgo + totalStreakBonuses + aiOnlyBonuses;
 
@@ -157,8 +161,10 @@ export default function AdminSync() {
         let weekTransformation: number;
 
         if (currentWeekScore) {
+          const storedAI = aiResults.find((r) => r.userId === rProfile.id && r.weekNumber === currentWeek);
+          const liveAiBonus = storedAI ? calcAIBonus(storedAI.credibilityScore, rProfile.intensity) : currentWeekScore.aiBonus;
           composite = calcCompositeScore(
-            currentWeekScore.egoPoints + currentWeekScore.streakBonus + currentWeekScore.aiBonus,
+            currentWeekScore.egoPoints + currentWeekScore.streakBonus + liveAiBonus,
             currentWeekScore.transformationScore,
             currentWeekScore.regularityScore,
             maxEgo,

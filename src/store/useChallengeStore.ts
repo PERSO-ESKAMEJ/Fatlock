@@ -84,5 +84,6 @@ export function getDaysRemaining(startDate: string, durationWeeks = 8): number {
 export function getChallengeEndDate(startDate: string, durationWeeks = 8): string {
   const start = parseLocalDate(startDate);
   const end = new Date(start.getTime() + durationWeeks * 7 * 86400000);
-  return end.toISOString().slice(0, 10);
+  // Utilise les composantes locales pour éviter le décalage UTC (ex : UTC+2 : minuit local = veille en UTC)
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 }
