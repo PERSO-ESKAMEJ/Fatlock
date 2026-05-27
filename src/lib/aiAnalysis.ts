@@ -1,4 +1,4 @@
-import { AIAnalysisResult, BodyComposition, WeeklyPhoto } from '../types';
+import { AIAnalysisResult, BodyComposition, WeeklyPhoto, Intensity } from '../types';
 
 interface AIAnalysisParams {
   userId: string;
@@ -9,7 +9,17 @@ interface AIAnalysisParams {
   prevPhoto?: WeeklyPhoto;
   apiKey: string;
   durationWeeks?: number;
+  intensity?: Intensity;
 }
+
+// Seuils de plausibilité de perte de graisse par rythme (% du poids corporel/semaine).
+// maxPlausiblePct : plausible avec marge d'erreur d'impédance (~±0.5 kg sur la MG).
+// impossiblePct   : physiologiquement impossible même à ce déficit.
+const INTENSITY_FAT_LOSS: Record<Intensity, { label: string; deficit: string; maxPlausiblePct: number; impossiblePct: number }> = {
+  safe:     { label: 'SÛRE',     deficit: '~300 kcal/j', maxPlausiblePct: 0.008, impossiblePct: 0.013 },
+  standard: { label: 'STANDARD', deficit: '~500 kcal/j', maxPlausiblePct: 0.012, impossiblePct: 0.018 },
+  flow:     { label: 'FLOW',     deficit: '~700 kcal/j', maxPlausiblePct: 0.015, impossiblePct: 0.022 },
+};
 
 function parseBase64(dataUrl: string): { mediaType: string; data: string } {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -26,10 +36,15 @@ function buildPrompt(
   currCompo: BodyComposition,
   prevCompo: BodyComposition | null,
   hasPrevPhoto: boolean,
-  durationWeeks = 8
+  durationWeeks = 8,
+  intensity: Intensity = 'standard'
 ): string {
   const mgPct = ((currCompo.fatMassKg / currCompo.weightKg) * 100).toFixed(1);
   const eauPct = currCompo.waterPercent?.toFixed(0) ?? 'N/A';
+  const ic = INTENSITY_FAT_LOSS[intensity];
+  const maxPlausibleKg = (currCompo.weightKg * ic.maxPlausiblePct).toFixed(2);
+  const impossibleKg   = (currCompo.weightKg * ic.impossiblePct).toFixed(2);
+  const intensityBlock = `RYTHME DU PARTICIPANT : ${ic.label} (déficit ${ic.deficit})\nPerte de graisse hebdomadaire plausible à ce rythme : jusqu'à ${maxPlausibleKg} kg. Au-delà de ${impossibleKg} kg : impossible physiologiquement.\n\n`;
 
   // ── VERSION 1 : Semaine 1, sans photo S0 ────────────────────────────────────
   if ((weekNumber === 1 || !prevCompo) && !hasPrevPhoto) {
@@ -39,7 +54,7 @@ function buildPrompt(
 
     return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne ou claim physiologiquement impossible.
 
-CONTEXTE PHOTO
+${intensityBlock}CONTEXTE PHOTO
 Tu reçois 1 seule photo : celle de la Semaine 1. Aucune photo antérieure n'est disponible. Tu ne peux donc PAS évaluer une évolution visuelle — n'invente aucune progression.
 
 DONNÉES DÉCLARÉES
@@ -91,7 +106,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 
     return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
-ORDRE DES PHOTOS — IMPORTANT
+${intensityBlock}ORDRE DES PHOTOS — IMPORTANT
 Tu reçois 2 photos dans cet ordre exact :
 1) Photo 1 = état de DÉPART (S0, avant le challenge)
 2) Photo 2 = Semaine 1 (S1, après une semaine)
@@ -147,11 +162,10 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
   const dPoids  = fmt(currCompo.weightKg     - prevCompo!.weightKg);
   const dMG     = fmt(currCompo.fatMassKg    - prevCompo!.fatMassKg);
   const dMM     = fmt(currCompo.muscleMassKg - prevCompo!.muscleMassKg);
-  const maxMGLoss = (currCompo.weightKg * 0.01).toFixed(2);
 
   return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
-ORDRE DES PHOTOS — IMPORTANT
+${intensityBlock}ORDRE DES PHOTOS — IMPORTANT
 ${hasPrevPhoto
   ? `Tu reçois 2 photos dans cet ordre exact :\n1) Photo 1 = semaine précédente S${weekNumber - 1}\n2) Photo 2 = semaine actuelle S${weekNumber}\nCompare TOUJOURS la photo 2 par rapport à la photo 1.`
   : `Tu reçois 1 seule photo : la semaine actuelle S${weekNumber}. Aucune comparaison visuelle possible, n'invente aucune progression.`}
@@ -165,7 +179,7 @@ DONNÉES DÉCLARÉES
 
 RÈGLES PHYSIOLOGIQUES (semaine 2+)
 - L'eau et le glycogène sont désormais stabilisés : la tolérance de la S1 ne s'applique PLUS.
-- Perte de graisse réaliste : maximum ~1 % du poids corporel par semaine, soit environ ${maxMGLoss} kg pour ce participant.
+- Rythme ${ic.label} : perte de graisse plausible ≤ ${maxPlausibleKg} kg/semaine (déficit ${ic.deficit} + marge d'impédance). Au-delà de ${impossibleKg} kg : impossible à ce rythme.
 - Les balances à impédance gardent ±1 à 2 kg d'erreur sur la masse grasse.
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg entre deux photos. Ne rien voir de différent est NORMAL, jamais suspect.
@@ -173,9 +187,9 @@ RÈGLES PHYSIOLOGIQUES (semaine 2+)
 GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne
 
 1. Plausibilité de la perte de masse grasse — /25
-   25 : perte de graisse ≤ 1 % du poids (≈ ${maxMGLoss} kg)
-   12 : entre 1 % et 2 % du poids (haute mais tolérée avec la marge d'impédance)
-   0  : > 2 % du poids en une semaine (physiologiquement impossible hors S1)
+   25 : perte de graisse ≤ ${maxPlausibleKg} kg (seuil rythme ${ic.label} + marge d'impédance)
+   12 : entre ${maxPlausibleKg} kg et ${impossibleKg} kg
+   0  : > ${impossibleKg} kg (impossible à ce rythme)
 
 2. Cohérence interne des métriques — /25
    25 : ${dPoids} ≈ somme des variations (graisse + muscle + eau)
@@ -322,10 +336,10 @@ export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAI
 }
 
 export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
-  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8 } = params;
+  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8, intensity = 'standard' } = params;
 
   const hasPrevPhoto = !!prevPhoto;
-  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks);
+  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks, intensity);
 
   // Photos : prev (AVANT) d'abord, puis current (APRÈS)
   const images: object[] = [];

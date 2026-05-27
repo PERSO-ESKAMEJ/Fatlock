@@ -262,6 +262,7 @@ export default function AdminSync() {
             prevPhoto: prevPhotos,
             apiKey: challenge.anthropicApiKey,
             durationWeeks,
+            intensity: recap.profile.intensity,
           });
           addAIResult(result);
           collectedAiResults.push(result);
