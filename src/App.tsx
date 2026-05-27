@@ -14,6 +14,7 @@ import FinalVote from './routes/FinalVote';
 import Settings from './routes/Settings';
 import DevSeed from './routes/DevSeed';
 import NavBar from './components/layout/NavBar';
+import FireBackground from './components/layout/FireBackground';
 import { ToastProvider } from './components/ui/Toast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,7 +44,8 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+      <FireBackground />
+      <div className="min-h-screen">
         {isSetup && <NavBar />}
         <Routes>
           <Route path="/" element={<Welcome />} />
