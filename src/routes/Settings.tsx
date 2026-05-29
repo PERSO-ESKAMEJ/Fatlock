@@ -642,6 +642,16 @@ export default function Settings() {
         <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--red)' }}>
           Zone Danger
         </div>
+        <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: 'rgba(255,77,94,0.06)', border: '1px solid rgba(255,77,94,0.2)' }}>
+          <div className="font-bold mb-1.5" style={{ color: 'var(--red)' }}>Actions qui effacent définitivement tes données</div>
+          <ul className="text-[var(--muted)] space-y-1 list-disc list-inside">
+            <li>Supprimer ce groupe ou "Tout supprimer" ci-dessous</li>
+            <li>Vider le cache / les données du navigateur</li>
+            <li>Désinstaller l'app (PWA) ou changer de navigateur</li>
+            <li>Changer d'appareil sans avoir fait de backup</li>
+          </ul>
+          <p className="mt-2 font-bold" style={{ color: 'var(--gold)' }}>Exporte un backup avant toute action irréversible.</p>
+        </div>
         <p className="text-xs text-[var(--muted)] mb-3">
           Supprime les données de ce groupe sur cet appareil. Tes autres groupes ne sont pas affectés.
         </p>

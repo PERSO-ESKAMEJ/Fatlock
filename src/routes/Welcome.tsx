@@ -317,6 +317,11 @@ export default function Welcome() {
             </Button>
           )}
         </div>
+
+        <p className="text-xs text-[var(--muted2)] mt-10 text-center max-w-xs leading-relaxed">
+          Tes données sont stockées localement sur ton appareil et ne sont jamais transmises à des tiers.
+          Les logs et photos synchronisés transitent uniquement vers le serveur Supabase configuré par l'administrateur du groupe.
+        </p>
       </div>
     );
   }
@@ -959,7 +964,7 @@ export default function Welcome() {
                   placeholder="20"
                 />
                 <p className="text-xs text-[var(--muted)] mt-1">
-                  Min. 4 participants pour qu'il y ait un gain financier.
+                  1er remporte 60% des gains · 2e remporte 40% · 3e récupère sa mise.
                 </p>
               </div>
               <div>

@@ -480,7 +480,7 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
           </div>
           <div className="text-sm font-bold text-[var(--ink)] mb-1">Mise en jeu par personne</div>
           <div className="text-xs text-[var(--muted)] leading-relaxed">
-            Le ou les gagnants remportent la cagnotte totale.
+            1er remporte 60% des gains · 2e remporte 40% · 3e récupère sa mise.
             La crédibilité compte autant que la performance.
           </div>
         </div>

@@ -3,7 +3,6 @@ export interface PrizeBreakdown {
   first: number;
   second: number;
   third: number;
-  adminFee: number;
   description: string;
 }
 
@@ -19,37 +18,36 @@ export function calculatePrizePool(
   participantCount: number
 ): PrizeBreakdown {
   const totalPool = stakeAmount * participantCount;
-  const adminFee = Math.round(totalPool * 0.05 * 100) / 100; // 5% admin fee
-  const net = totalPool - adminFee;
 
   let first = 0;
   let second = 0;
   let third = 0;
 
   if (participantCount <= 2) {
-    first = net;
-    second = 0;
-    third = 0;
+    // Pas assez de joueurs pour le podium complet — le gagnant prend tout
+    first = totalPool;
   } else if (participantCount === 3) {
-    first = Math.round(net * 0.6 * 100) / 100;
-    second = Math.round(net * 0.3 * 100) / 100;
-    third = Math.round((net - first - second) * 100) / 100;
-  } else if (participantCount <= 5) {
-    first = Math.round(net * 0.5 * 100) / 100;
-    second = Math.round(net * 0.3 * 100) / 100;
-    third = Math.round((net - first - second) * 100) / 100;
+    // Tout le monde récupère sa mise, pas de gain
+    first = stakeAmount;
+    second = stakeAmount;
+    third = stakeAmount;
   } else {
-    first = Math.round(net * 0.45 * 100) / 100;
-    second = Math.round(net * 0.3 * 100) / 100;
-    third = Math.round((net - first - second) * 100) / 100;
+    // Règle principale : 4+ joueurs
+    // 3e récupère sa mise ; 1er et 2e se partagent les mises des 4e et au-delà (60/40)
+    const gainPool = (participantCount - 3) * stakeAmount;
+    third = stakeAmount;
+    first = Math.round((stakeAmount + gainPool * 0.6) * 100) / 100;
+    second = Math.round((stakeAmount + gainPool * 0.4) * 100) / 100;
   }
 
   const description =
     participantCount <= 2
       ? `Le gagnant remporte la totalité du pot (${first.toFixed(2)} €).`
+      : participantCount === 3
+      ? `Tout le monde récupère sa mise (${stakeAmount.toFixed(2)} €) — aucun gain possible à 3.`
       : `1er: ${first.toFixed(2)} € · 2e: ${second.toFixed(2)} € · 3e: ${third.toFixed(2)} €`;
 
-  return { totalPool, first, second, third, adminFee, description };
+  return { totalPool, first, second, third, description };
 }
 
 export function distributePrizes(
