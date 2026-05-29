@@ -383,10 +383,10 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
             className="font-display text-3xl font-bold tracking-widest text-center px-4 py-2 rounded-xl flex-shrink-0"
             style={{ background: 'var(--panel2)', color: 'var(--cyan)', border: '1px solid var(--border)' }}
           >
-            4B2K9R
+            APEX-07
           </div>
           <p className="text-sm text-[var(--muted)] leading-relaxed">
-            Un code à 6 caractères différent chaque jour. Tu l'entres avant de cocher tes rituels.
+            Un code unique par groupe et par jour. Tu l'entres avant de cocher tes rituels.
           </p>
         </div>
         <div className="space-y-1.5 text-xs text-[var(--muted)]">
@@ -396,7 +396,7 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
           </div>
           <div className="flex items-start gap-2">
             <span className="text-[var(--green)] flex-shrink-0 mt-0.5">✓</span>
-            <span>Le code change à minuit — impossible de valider un jour passé</span>
+            <span>Le code change à minuit · La veille reste accessible sans code</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-[var(--green)] flex-shrink-0 mt-0.5">✓</span>
