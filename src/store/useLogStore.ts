@@ -59,7 +59,7 @@ export const useLogStore = create<LogStore>()(
       getDailyLog: (userId, date) =>
         get().dailyLogs.find((l) => l.userId === userId && l.date === date),
 
-      addBodyComposition: (comp) =>
+      addBodyComposition: (comp) => {
         set((s) => {
           const idx = s.bodyCompositions.findIndex(
             (c) => c.userId === comp.userId && c.weekNumber === comp.weekNumber
@@ -70,7 +70,21 @@ export const useLogStore = create<LogStore>()(
             return { bodyCompositions: updated };
           }
           return { bodyCompositions: [...s.bodyCompositions, comp] };
-        }),
+        });
+        // Fire-and-forget sync vers Supabase
+        const sb = supabase();
+        const challenge = useProfileStore.getState().challenge;
+        if (sb && challenge) {
+          (async () => {
+            try {
+              await sb.from('body_compositions').upsert(
+                { challenge_id: challenge.id, user_id: comp.userId, week_number: comp.weekNumber, data: comp, updated_at: new Date().toISOString() },
+                { onConflict: 'challenge_id,user_id,week_number' }
+              );
+            } catch { /* silencieux */ }
+          })();
+        }
+      },
 
       getLatestBodyComp: (userId) => {
         const comps = get()

@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { DailyLog, RecapFile } from '../types';
+import { DailyLog, BodyComposition, RecapFile } from '../types';
 
 let _client: SupabaseClient | null = null;
 
@@ -26,10 +26,10 @@ export async function recoverAccount(
   anonKey: string,
   challengeId: string,
   profileId: string
-): Promise<{ recap: RecapFile | null; dailyLogs: DailyLog[] }> {
+): Promise<{ recap: RecapFile | null; dailyLogs: DailyLog[]; bodyCompositions: BodyComposition[] }> {
   const sb = createClient(supabaseUrl, anonKey);
 
-  const [{ data: recapRows }, { data: logRows }] = await Promise.all([
+  const [{ data: recapRows }, { data: logRows }, { data: compRows }] = await Promise.all([
     sb.from('recaps')
       .select('data')
       .eq('challenge_id', challengeId)
@@ -40,12 +40,17 @@ export async function recoverAccount(
       .select('data')
       .eq('challenge_id', challengeId)
       .eq('user_id', profileId),
+    sb.from('body_compositions')
+      .select('data')
+      .eq('challenge_id', challengeId)
+      .eq('user_id', profileId),
   ]);
 
   const recap = (recapRows?.[0]?.data as RecapFile) ?? null;
   const dailyLogs = (logRows ?? []).map((r: { data: DailyLog }) => r.data);
+  const bodyCompositions = (compRows ?? []).map((r: { data: BodyComposition }) => r.data);
 
-  return { recap, dailyLogs };
+  return { recap, dailyLogs, bodyCompositions };
 }
 
 export function clearSupabase(): void {

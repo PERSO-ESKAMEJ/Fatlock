@@ -7,7 +7,7 @@ import { registerGroupMember, recoverAccount } from '../lib/supabase';
 import {
   UserProfile, ChallengeConfig, Sex, Intensity, DayType,
   ChallengeType, CustomRitual, CustomChallengeSettings,
-  FATLOCK_DEFAULT_CUSTOM_RITUALS,
+  FATLOCK_DEFAULT_CUSTOM_RITUALS, BodyComposition,
 } from '../types';
 import Button from '../components/ui/Button';
 
@@ -214,7 +214,7 @@ export default function Welcome() {
     setRecoveryLoading(true);
     setRecoveryError('');
     try {
-      const { recap, dailyLogs: recoveredLogs } = await recoverAccount(sbUrlParam, sbKeyParam, cidParam, recoveryCode.trim());
+      const { recap, dailyLogs: recoveredLogs, bodyCompositions: recoveredComps } = await recoverAccount(sbUrlParam, sbKeyParam, cidParam, recoveryCode.trim());
       if (!recap) {
         setRecoveryError('Aucun compte trouvé pour ce code. Vérifie le code et réessaie.');
         return;
@@ -244,11 +244,17 @@ export default function Welcome() {
       for (const log of recoveredLogs) logMap.set(log.date, log);
       const allLogs = [...logMap.values()];
 
+      // Fusionne les pesées du récap + les pesées récentes de Supabase (les plus récentes priment)
+      const compMap = new Map<number, BodyComposition>();
+      for (const c of recap.bodyCompositions) compMap.set(c.weekNumber, c);
+      for (const c of recoveredComps) compMap.set(c.weekNumber, c);
+      const allComps = [...compMap.values()];
+
       useLogStore.setState((s) => {
         const otherId = restoredProfile.id;
         return {
           dailyLogs: [...s.dailyLogs.filter((l) => l.userId !== otherId), ...allLogs],
-          bodyCompositions: [...s.bodyCompositions.filter((c) => c.userId !== otherId), ...recap.bodyCompositions],
+          bodyCompositions: [...s.bodyCompositions.filter((c) => c.userId !== otherId), ...allComps],
           weeklyScores: [...s.weeklyScores.filter((ws) => ws.userId !== otherId), ...recap.weeklyScores],
         };
       });
