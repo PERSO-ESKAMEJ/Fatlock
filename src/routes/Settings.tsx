@@ -417,6 +417,11 @@ export default function Settings() {
             <span className="text-[var(--muted)]">Mise en jeu</span>
             <span className="font-mono">{challenge.stakeAmount} €</span>
           </div>
+          <div className="pt-1 pb-1">
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              Les 3 premiers récupèrent leur mise. Le 1er et le 2e se partagent les mises des 4e et suivants : 60% pour le 1er, 40% pour le 2e.
+            </div>
+          </div>
           <div className="flex justify-between">
             <span className="text-[var(--muted)]">Début</span>
             <span className="font-mono">{challenge.startDate}</span>
