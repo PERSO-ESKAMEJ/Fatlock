@@ -480,7 +480,7 @@ export default function PrelaunchGuide({ challenge, profile }: Props) {
           </div>
           <div className="text-sm font-bold text-[var(--ink)] mb-1">Mise en jeu par personne</div>
           <div className="text-xs text-[var(--muted)] leading-relaxed">
-            1er remporte 60% des gains · 2e remporte 40% · 3e récupère sa mise.
+            Les 3 premiers récupèrent leur mise. Le 1er et le 2e se partagent les mises des 4e et suivants : 60% pour le 1er, 40% pour le 2e.
             La crédibilité compte autant que la performance.
           </div>
         </div>
