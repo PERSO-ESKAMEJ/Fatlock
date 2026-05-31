@@ -40,7 +40,7 @@ export default function Leaderboard() {
           <div className="font-display text-xl uppercase tracking-wider text-[var(--ink)] mb-2">J-{daysLeft}</div>
           <div className="font-bold text-[var(--ink)] mb-1">Challenge pas encore commencé</div>
           <div className="text-sm text-[var(--muted)] mb-5">
-            Le classement sera disponible dès le {new Date(challenge.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+            Le classement sera disponible dès le {new Date(challenge.startDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
           </div>
           <button
             onClick={() => navigate('/checkin?week=0')}

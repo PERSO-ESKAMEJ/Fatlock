@@ -57,8 +57,8 @@ export default function Settings() {
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   useEffect(() => {
-    if (profile?.isAdmin) fetchMembers();
-  }, []);
+    if (profile?.isAdmin && supabase()) fetchMembers();
+  }, [challenge?.supabaseUrl, challenge?.supabaseAnonKey]);
 
   if (!profile || !challenge) return null;
 

@@ -23,11 +23,18 @@ export default function DailyCodeUnlock() {
   function confirmAndLog() {
     confirmCode(challenge.groupCode, today);
     const existing = getDailyLog(profile.id, today);
+    // Derive real dayType from profile schedule — don't default to 'repos'
+    const dow = new Date().getDay();
+    const dowMap: Record<number, keyof typeof profile.trainingDays> = {
+      0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+      4: 'thursday', 5: 'friday', 6: 'saturday',
+    };
+    const scheduledDayType = profile.trainingDays[dowMap[dow]] ?? 'repos';
     upsertDailyLog({
       userId: profile.id,
       date: today,
       codeConfirmed: true,
-      dayType: existing?.dayType ?? 'repos',
+      dayType: existing?.dayType ?? scheduledDayType,
       rituals: existing?.rituals ?? {},
     });
     showToast('Journée activée ! Rituels débloqués.', 'success');

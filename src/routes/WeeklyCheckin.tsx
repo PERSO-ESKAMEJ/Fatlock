@@ -84,8 +84,9 @@ export default function WeeklyCheckin() {
           ? challenge.customSettings?.rituals
           : undefined;
         const allUserLogs = dailyLogs.filter((l) => l.userId === profile.id);
-        const today = new Date();
-        const elapsedDays = Math.min(7, Math.max(1, Math.floor((today.getTime() - weekStartDate.getTime()) / 86400000) + 1));
+        const todayRaw = new Date();
+        const todayMidnight = new Date(todayRaw.getFullYear(), todayRaw.getMonth(), todayRaw.getDate());
+        const elapsedDays = Math.min(7, Math.max(1, Math.floor((todayMidnight.getTime() - weekStartDate.getTime()) / 86400000) + 1));
         const score = buildWeeklyScore(
           profile.id,
           currentWeek,

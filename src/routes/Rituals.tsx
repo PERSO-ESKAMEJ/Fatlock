@@ -22,7 +22,8 @@ const DAY_TYPE_LABELS: Record<DayType, string> = {
 function getYesterdayStr(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  // Local date components — avoids UTC offset shifting the date (e.g. UTC+2 users at 1am)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function Rituals() {
@@ -126,7 +127,7 @@ export default function Rituals() {
           <div className="text-3xl mb-3">🔒</div>
           <div className="font-bold text-[var(--ink)] mb-2">Challenge pas encore commencé</div>
           <div className="text-sm text-[var(--muted)]">
-            La saisie des rituels sera disponible dès le {new Date(challenge.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+            La saisie des rituels sera disponible dès le {new Date(challenge.startDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
           </div>
         </div>
       </PageWrapper>

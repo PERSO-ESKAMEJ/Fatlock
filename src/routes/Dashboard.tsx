@@ -19,7 +19,13 @@ export default function Dashboard() {
   const state = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const s0Done = bodyComps.some((c) => c.weekNumber === 0);
-  const checkinDue = state === 'active' && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  // Don't show check-in on J1–J6 — user needs to complete the week first (min 6 days elapsed)
+  const [sy, sm, sd] = challenge.startDate.split('-').map(Number);
+  const startLocal = new Date(sy, sm - 1, sd);
+  const todayLocal = new Date();
+  const todayMidnight = new Date(todayLocal.getFullYear(), todayLocal.getMonth(), todayLocal.getDate());
+  const diffDaysSinceStart = Math.floor((todayMidnight.getTime() - startLocal.getTime()) / 86400000);
+  const checkinDue = state === 'active' && diffDaysSinceStart >= 6 && !bodyComps.some((c) => c.weekNumber === currentWeek);
 
   const greeting = profile.sex === 'M'
     ? `Ton ego forge sa légende, ${profile.name}.`
@@ -51,7 +57,7 @@ export default function Dashboard() {
             J-{daysLeft}
           </div>
           <div className="text-sm text-[var(--muted)]">
-            Commence le {new Date(challenge.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            Commence le {new Date(challenge.startDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
         </div>
 

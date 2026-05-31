@@ -22,7 +22,12 @@ export default function Progress() {
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
-  const checkinDue = challengeState === 'active' && currentWeek >= 1 && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  const [spy, spm, spd] = challenge.startDate.split('-').map(Number);
+  const startLocalP = new Date(spy, spm - 1, spd);
+  const nowLocalP = new Date();
+  const todayMidnightP = new Date(nowLocalP.getFullYear(), nowLocalP.getMonth(), nowLocalP.getDate());
+  const diffDaysP = Math.floor((todayMidnightP.getTime() - startLocalP.getTime()) / 86400000);
+  const checkinDue = challengeState === 'active' && diffDaysP >= 6 && !bodyComps.some((c) => c.weekNumber === currentWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');

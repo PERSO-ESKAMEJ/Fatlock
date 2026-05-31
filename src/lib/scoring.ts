@@ -71,13 +71,22 @@ function isDayValid(log: DailyLog, intensity: Intensity, customRituals?: CustomR
 
 export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, customRituals?: CustomRitual[]): number {
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+  if (sorted.length === 0) return 0;
+
+  // Streak is broken if the most recent log is not today or yesterday
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const prev = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterdayStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+  if (sorted[0].date !== todayStr && sorted[0].date !== yesterdayStr) return 0;
+
   let streak = 0;
   let prevDate: string | null = null;
   for (const log of sorted) {
     if (prevDate !== null) {
-      const prev: Date = new Date(prevDate + 'T12:00:00');
-      prev.setDate(prev.getDate() - 1);
-      const expected: string = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+      const prevD: Date = new Date(prevDate + 'T12:00:00');
+      prevD.setDate(prevD.getDate() - 1);
+      const expected: string = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}-${String(prevD.getDate()).padStart(2, '0')}`;
       if (log.date !== expected) break;
     }
     if (!isDayValid(log, intensity, customRituals)) break;

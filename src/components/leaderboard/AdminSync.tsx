@@ -122,6 +122,14 @@ export default function AdminSync() {
         return { start: s.toISOString().slice(0, 10), end: e.toISOString().slice(0, 10) };
       }
 
+      // Nombre de jours réellement écoulés dans la semaine courante (1 à 7)
+      // Utilisé pour la régularité live (avant le check-in hebdo)
+      const { start: cwWeekStart } = weekRange(currentWeek);
+      const cwWeekStartDate = new Date(cwWeekStart + 'T12:00:00');
+      const nowRaw = new Date();
+      const nowMidnight = new Date(nowRaw.getFullYear(), nowRaw.getMonth(), nowRaw.getDate());
+      const elapsedDaysInWeek = Math.min(7, Math.max(1, Math.floor((nowMidnight.getTime() - cwWeekStartDate.getTime()) / 86400000) + 1));
+
       for (const recap of effectiveRecaps) {
         const { profile: rProfile, dailyLogs: rLogs, weeklyScores: rScores } = recap;
 
@@ -177,7 +185,7 @@ export default function AdminSync() {
             (sum, l) => sum + calcDayRitualPoints(l, rProfile.intensity, customRituals),
             0
           );
-          weekRegularity = calcRegularityScore(cwLogs, 7);
+          weekRegularity = calcRegularityScore(cwLogs, elapsedDaysInWeek);
           const sortedRScores = [...rScores].sort((a, b) => a.weekNumber - b.weekNumber);
           weekTransformation = sortedRScores[sortedRScores.length - 1]?.transformationScore ?? 0;
           composite = calcCompositeScore(cwEgo, weekTransformation, weekRegularity, maxEgo, rProfile.intensity);

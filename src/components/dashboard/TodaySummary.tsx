@@ -30,7 +30,7 @@ export default function TodaySummary() {
   const earnedPts = log ? calcDayRitualPoints(log, profile.intensity, customRituals ?? undefined) : 0;
   const maxPts = isCustom && customRituals
     ? Math.round(customRituals.reduce((s, r) => s + r.points * 10, 0) * INTENSITY_MULTIPLIER[profile.intensity])
-    : getMaxPointsForDay(dayType, profile.intensity);
+    : Math.round(getMaxPointsForDay(dayType, profile.intensity) * INTENSITY_MULTIPLIER[profile.intensity]);
   const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (

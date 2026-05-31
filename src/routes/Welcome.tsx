@@ -159,6 +159,8 @@ export default function Welcome() {
     setJoinError('');
 
     const profileId = crypto.randomUUID();
+    const groupCode = mode === 'create' ? generateId(6) : joinCode.toUpperCase().trim();
+
     const newProfile: UserProfile = {
       id: profileId,
       name: name.trim(),
@@ -169,12 +171,10 @@ export default function Welcome() {
       activityLevel,
       intensity,
       trainingDays,
-      groupCode: generateId(6),
+      groupCode,
       isAdmin: mode === 'create',
       createdAt: new Date().toISOString(),
     };
-
-    const groupCode = mode === 'create' ? generateId(6) : joinCode.toUpperCase().trim();
     const groupSecret = groupCode;
     const defaultName = challengeType === 'fatlock'
       ? `FATLOCK ${name} ${new Date().toLocaleString('fr-FR', { month: 'long' })}`
