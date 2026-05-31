@@ -970,7 +970,7 @@ export default function Welcome() {
                   placeholder="20"
                 />
                 <p className="text-xs text-[var(--muted)] mt-1">
-                  1er remporte 60% des gains · 2e remporte 40% · 3e récupère sa mise.
+                  Les 3 premiers récupèrent leur mise. Le 1er et le 2e se partagent les mises des 4e et suivants : 60% pour le 1er, 40% pour le 2e.
                 </p>
               </div>
               <div>
