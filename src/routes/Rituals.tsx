@@ -151,7 +151,7 @@ export default function Rituals() {
         </div>
       </div>
 
-      {/* Sélecteur Aujourd'hui / Hier */}
+      {/* Sélecteur Aujourd'hui / Hier — Hier masqué si avant le J1 */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setViewingDay('today'); }}
@@ -164,17 +164,19 @@ export default function Rituals() {
         >
           Aujourd'hui
         </button>
-        <button
-          onClick={() => { setViewingDay('yesterday'); }}
-          className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
-          style={{
-            background: isYesterday ? 'var(--blue)' : 'var(--panel)',
-            color: isYesterday ? 'white' : 'var(--muted)',
-            border: `1px solid ${isYesterday ? 'var(--blue)' : 'var(--border)'}`,
-          }}
-        >
-          Hier · {yesterday}
-        </button>
+        {yesterday >= challenge.startDate && (
+          <button
+            onClick={() => { setViewingDay('yesterday'); }}
+            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={{
+              background: isYesterday ? 'var(--blue)' : 'var(--panel)',
+              color: isYesterday ? 'white' : 'var(--muted)',
+              border: `1px solid ${isYesterday ? 'var(--blue)' : 'var(--border)'}`,
+            }}
+          >
+            Hier · {yesterday}
+          </button>
+        )}
       </div>
 
       {!unlocked ? (
