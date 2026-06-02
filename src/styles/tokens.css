@@ -1,22 +1,35 @@
 :root {
-  --bg: #04070f;
-  --bg2: #070c1a;
-  --panel: #0b1326;
-  --panel2: #0e1830;
-  --border: #1b294a;
-  --blue: #2f7bff;
-  --blue-bright: #4d92ff;
-  --cyan: #21e6ff;
-  --ink: #eaf1ff;
-  --muted: #7d8db4;
-  --muted2: #566186;
-  --gold: #ffc23d;
-  --red: #ff4d5e;
-  --green: #2fe39a;
+  /* ── Backgrounds ── */
+  --bg: #080100;
+  --bg2: #0D0200;
+  --panel: #180500;
+  --panel2: #220800;
+  --border: #4A1008;
+
+  /* ── Primary accent : crimson fire ── */
+  --blue: #C41200;
+  --blue-bright: #FF2800;
+
+  /* ── Secondary accent : amber gold ── */
+  --cyan: #FFAB00;
+
+  /* ── Text ── */
+  --ink: #FFF0E4;
+  --muted: #9E6650;
+  --muted2: #6B3D32;
+
+  /* ── Semantic ── */
+  --gold: #FFD700;
+  --red: #FF4D5E;
+  --green: #2FE39A;
+
+  /* ── Fonts ── */
   --font-display: 'Anton', sans-serif;
   --font-body: 'Archivo', sans-serif;
   --font-mono: 'Space Mono', monospace;
-  --safe: #2fe39a;
-  --standard: #2f7bff;
-  --flow: #ff4d5e;
+
+  /* ── Intensity modes ── */
+  --safe: #2FE39A;
+  --standard: #FFAB00;
+  --flow: #FF2800;
 }
