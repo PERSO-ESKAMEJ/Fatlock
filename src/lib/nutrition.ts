@@ -15,8 +15,8 @@ export interface NutritionTargets {
 
 // Déficit exprimé en % du TDEE effectif — garantit un lissage par niveau d'activité
 const DEFICIT_RATE: Record<Intensity, number> = {
-  safe: 0.23,
-  standard: 0.33,
+  safe: 0.28,
+  standard: 0.36,
   flow: 0.43,
 };
 
