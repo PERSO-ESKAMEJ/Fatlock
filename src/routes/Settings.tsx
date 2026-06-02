@@ -45,6 +45,7 @@ export default function Settings() {
   const isLocked = challengeState !== 'pending' && diffDaysSinceStart >= 7;
 
   const [age, setAge] = useState(profile?.age?.toString() ?? '');
+  const [activityLevel, setActivityLevel] = useState(profile?.activityLevel ?? 1.55);
   const [intensity, setIntensity] = useState<Intensity>(profile?.intensity ?? 'standard');
   const [apiKey, setApiKey] = useState(challenge?.anthropicApiKey ?? '');
   const [supabaseUrl, setSupabaseUrl] = useState(challenge?.supabaseUrl ?? '');
@@ -122,7 +123,7 @@ export default function Settings() {
       showToast('Âge invalide', 'error');
       return;
     }
-    const updates: Partial<UserProfile> = { age: parsedAge };
+    const updates: Partial<UserProfile> = { age: parsedAge, activityLevel };
     if (!isLocked) updates.intensity = intensity;
     updateProfile(updates);
     showToast('Profil mis à jour', 'success');
@@ -323,6 +324,37 @@ export default function Settings() {
             <input type="text" value={profile.sex === 'M' ? 'Homme' : 'Femme'} disabled className="opacity-40 cursor-not-allowed" />
           </div>
         </div>
+        {/* Niveau d'activité — toujours modifiable */}
+        <div className="mb-3 pt-3 border-t border-[var(--border)]">
+          <label className="mb-2 block">Niveau d'activité</label>
+          <div className="space-y-1.5">
+            {[
+              { value: 1.2,   emoji: '🪑', label: 'Sédentaire',        sub: 'Bureau, peu de mouvement' },
+              { value: 1.375, emoji: '🚶', label: 'Légèrement actif',  sub: 'Sport 1–2×/semaine' },
+              { value: 1.55,  emoji: '🏃', label: 'Modérément actif',  sub: 'Sport 3–4×/semaine' },
+              { value: 1.725, emoji: '💪', label: 'Très actif',        sub: 'Sport 5–6×/semaine' },
+              { value: 1.9,   emoji: '🏆', label: 'Extrêmement actif', sub: 'Athlète / travail physique' },
+            ].map((a) => (
+              <button
+                key={a.value}
+                onClick={() => setActivityLevel(a.value)}
+                className="w-full p-3 rounded-lg text-left flex items-center gap-3 transition-all"
+                style={{
+                  background: activityLevel === a.value ? 'rgba(47,123,255,0.12)' : 'var(--panel2)',
+                  border: `1px solid ${activityLevel === a.value ? 'var(--blue)' : 'var(--border)'}`,
+                }}
+              >
+                <span className="text-lg">{a.emoji}</span>
+                <div>
+                  <div className="text-sm font-bold" style={{ color: activityLevel === a.value ? 'var(--blue-bright)' : 'var(--ink)' }}>{a.label}</div>
+                  <div className="text-xs text-[var(--muted)]">{a.sub}</div>
+                </div>
+                {activityLevel === a.value && <span className="ml-auto text-[var(--blue-bright)]">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Intensité — modifiable avant le J1 seulement */}
         <div className="mb-3 pt-3 border-t border-[var(--border)]">
           <div className="flex items-center justify-between mb-2">
