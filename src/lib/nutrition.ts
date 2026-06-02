@@ -13,9 +13,9 @@ export interface NutritionTargets {
 }
 
 const WEEKLY_LOSS_RATE: Record<Intensity, number> = {
-  safe: 0.005,
-  standard: 0.0075,
-  flow: 0.01,
+  safe: 0.0075,
+  standard: 0.01,
+  flow: 0.015,
 };
 
 export const INTENSITY_MULTIPLIER: Record<Intensity, number> = {
