@@ -65,10 +65,10 @@ export function calculateTargets(
     // STANDARD : jamais sous BMR × 1.0 (au BMR, déficit réel possible)
     // FLOW     : plancher absolu à 1400 kcal (déficit assumé)
     const floor = intensity === 'flow'
-      ? (sex === 'M' ? 1400 : 1200)
+      ? (sex === 'M' ? Math.max(Math.round(bmr * 0.75), 1200) : Math.max(Math.round(bmr * 0.75), 1000))
       : intensity === 'standard'
-        ? (sex === 'M' ? Math.max(Math.round(bmr), 1400) : Math.max(Math.round(bmr), 1200))
-        : (sex === 'M' ? Math.max(Math.round(bmr * 1.1), 1500) : Math.max(Math.round(bmr * 1.1), 1300));
+        ? (sex === 'M' ? Math.max(Math.round(bmr * 0.85), 1400) : Math.max(Math.round(bmr * 0.85), 1200))
+        : (sex === 'M' ? Math.max(Math.round(bmr * 1.0), 1500) : Math.max(Math.round(bmr * 1.0), 1300));
     safetyFloorApplied = targetKcal < floor;
     if (safetyFloorApplied) targetKcal = floor;
 
