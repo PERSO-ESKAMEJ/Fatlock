@@ -15,9 +15,9 @@ export interface NutritionTargets {
 
 // Déficit exprimé en % du TDEE effectif — garantit un lissage par niveau d'activité
 const DEFICIT_RATE: Record<Intensity, number> = {
-  safe: 0.20,
-  standard: 0.30,
-  flow: 0.40,
+  safe: 0.23,
+  standard: 0.33,
+  flow: 0.43,
 };
 
 // Dépense calorique estimée par type de séance FATLOCK
