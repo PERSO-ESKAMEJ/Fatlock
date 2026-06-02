@@ -36,7 +36,13 @@ export default function Settings() {
 
   const durationWeeks = challenge?.durationWeeks ?? challenge?.customSettings?.durationWeeks ?? 8;
   const challengeState = challenge ? getChallengeState(challenge.startDate, durationWeeks) : 'pending';
-  const isLocked = challengeState !== 'pending';
+  // Intensité modifiable pendant les 7 premiers jours (correction d'erreur d'inscription)
+  const [sy, sm, sd] = (challenge?.startDate ?? '2000-01-01').split('-').map(Number);
+  const startLocal = new Date(sy, sm - 1, sd);
+  const todayLocal = new Date();
+  const todayMidnight = new Date(todayLocal.getFullYear(), todayLocal.getMonth(), todayLocal.getDate());
+  const diffDaysSinceStart = Math.floor((todayMidnight.getTime() - startLocal.getTime()) / 86400000);
+  const isLocked = challengeState !== 'pending' && diffDaysSinceStart >= 7;
 
   const [age, setAge] = useState(profile?.age?.toString() ?? '');
   const [intensity, setIntensity] = useState<Intensity>(profile?.intensity ?? 'standard');
@@ -321,9 +327,13 @@ export default function Settings() {
         <div className="mb-3 pt-3 border-t border-[var(--border)]">
           <div className="flex items-center justify-between mb-2">
             <label className="mb-0">Rythme d'intensité</label>
-            {isLocked && (
+            {isLocked ? (
               <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(255,200,0,0.1)', color: 'var(--gold)', border: '1px solid rgba(255,200,0,0.3)' }}>
-                🔒 Figé au J1
+                🔒 Figé après J7
+              </span>
+            ) : challengeState !== 'pending' && (
+              <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(45,255,159,0.1)', color: 'var(--green)', border: '1px solid rgba(45,255,159,0.3)' }}>
+                Modifiable jusqu'à J7
               </span>
             )}
           </div>
