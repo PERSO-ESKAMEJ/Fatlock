@@ -55,7 +55,7 @@ export default function Nutrition() {
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((l) => ({ label: l.date.slice(5), weight: l.weightKg!, target: null }));
 
-  const chartData = dailyWeights.length > 0 ? dailyWeights : weightPoints.filter((p) => p.weight !== null || p.target !== null);
+  const chartData = dailyWeights.length >= 2 ? dailyWeights : weightPoints.filter((p) => p.target !== null);
 
   const macros = [
     { label: 'Protéines', g: targets.protein, kcal: targets.protein * 4, pct: macroPercents.proteinPct, color: 'var(--blue-bright)' },
