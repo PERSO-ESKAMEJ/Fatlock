@@ -72,10 +72,10 @@ export default function Nutrition() {
         <div className="text-sm text-[var(--muted)]">kcal / jour</div>
         <div className="flex items-center justify-center gap-4 mt-3 text-xs text-[var(--muted)]">
           <span>BMR: <span className="text-[var(--ink)] font-mono">{targets.bmr}</span></span>
-          <span>TDEE: <span className="text-[var(--ink)] font-mono">{targets.tdee}</span></span>
+          <span>TDEE: <span className="text-[var(--ink)] font-mono">{targets.effectiveTdee}</span></span>
           <span>
             {weightDirection === 'up' ? 'Surplus' : weightDirection === 'stable' ? 'Équilibre' : 'Déficit'}:{' '}
-            <span className="text-[var(--ink)] font-mono">{Math.abs(targets.tdee - targets.targetKcal)}</span>
+            <span className="text-[var(--ink)] font-mono">{Math.abs(targets.effectiveTdee - targets.targetKcal)}</span>
           </span>
         </div>
       </div>
