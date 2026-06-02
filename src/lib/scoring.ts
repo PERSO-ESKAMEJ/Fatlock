@@ -73,16 +73,25 @@ export function calcCurrentStreak(logs: DailyLog[], intensity: Intensity, custom
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) return 0;
 
-  // Streak is broken if the most recent log is not today or yesterday
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const prev = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const yesterdayStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
-  if (sorted[0].date !== todayStr && sorted[0].date !== yesterdayStr) return 0;
+
+  // Si le log le plus récent est aujourd'hui mais pas encore valide (journée en cours),
+  // on l'ignore et on commence le calcul depuis hier — l'activation du code ne doit pas casser la streak.
+  let startIdx = 0;
+  if (sorted[0].date === todayStr && !isDayValid(sorted[0], intensity, customRituals)) {
+    startIdx = 1;
+  }
+
+  if (startIdx >= sorted.length) return 0;
+  if (sorted[startIdx].date !== todayStr && sorted[startIdx].date !== yesterdayStr) return 0;
 
   let streak = 0;
   let prevDate: string | null = null;
-  for (const log of sorted) {
+  for (let i = startIdx; i < sorted.length; i++) {
+    const log = sorted[i];
     if (prevDate !== null) {
       const prevD: Date = new Date(prevDate + 'T12:00:00');
       prevD.setDate(prevD.getDate() - 1);
