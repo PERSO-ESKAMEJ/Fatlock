@@ -29,33 +29,35 @@ export default function Nutrition() {
 
   const latest = getLatest(profile.id);
   const currentWeight = latest?.weightKg ?? profile.startWeight;
-  const s0Weight = bodyComps.find((c) => c.weekNumber === 0)?.weightKg ?? profile.startWeight;
+  const s0Comp = bodyComps.find((c) => c.weekNumber === 0);
+  const s0Weight = s0Comp?.weightKg ?? profile.startWeight;
   const weightDirection = challenge.customSettings?.weightDirection ?? 'down';
   const targets = calculateTargets(profile, currentWeight, durationWeeks, weightDirection);
   const macroPercents = getMacroPercents(targets);
 
-  // Build weight chart data
+  // Build weight chart data (trajectory cible S0→S8)
   const weightPoints: { label: string; weight: number | undefined; target: number }[] = [
     { label: 'S0', weight: s0Weight, target: s0Weight },
   ];
-
   for (let w = 1; w <= durationWeeks; w++) {
     const comp = bodyComps.find((c) => c.weekNumber === w);
     const targetW = +(s0Weight - targets.weeklyLossKg * w).toFixed(1);
-    weightPoints.push({
-      label: `S${w}`,
-      weight: comp?.weightKg ?? undefined,
-      target: targetW,
-    });
+    weightPoints.push({ label: `S${w}`, weight: comp?.weightKg ?? undefined, target: targetW });
   }
 
-  // Also add daily weigh-ins
+  // Pesées quotidiennes depuis les logs
   const dailyWeights = dailyLogs
     .filter((l) => l.weightKg != null)
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((l) => ({ label: l.date.slice(5), weight: l.weightKg!, target: null }));
+    .map((l) => ({ label: l.date.slice(5), weight: l.weightKg!, target: null as null }));
 
-  const chartData = dailyWeights.length >= 2 ? dailyWeights : weightPoints.filter((p) => p.target !== null);
+  // Graphique : S0 + pesées quotidiennes si dispo, sinon trajectoire cible
+  const chartData = dailyWeights.length >= 1
+    ? [
+        ...(s0Comp ? [{ label: s0Comp.date.slice(5), weight: s0Comp.weightKg, target: null as null }] : []),
+        ...dailyWeights,
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    : weightPoints.filter((p) => p.target !== null);
 
   const macros = [
     { label: 'Protéines', g: targets.protein, kcal: targets.protein * 4, pct: macroPercents.proteinPct, color: 'var(--blue-bright)' },
