@@ -35,29 +35,54 @@ export default function Nutrition() {
   const targets = calculateTargets(profile, currentWeight, durationWeeks, weightDirection);
   const macroPercents = getMacroPercents(targets);
 
-  // Build weight chart data (trajectory cible S0→S8)
-  const weightPoints: { label: string; weight: number | undefined; target: number }[] = [
-    { label: 'S0', weight: s0Weight, target: s0Weight },
-  ];
-  for (let w = 1; w <= durationWeeks; w++) {
-    const comp = bodyComps.find((c) => c.weekNumber === w);
-    const targetW = +(s0Weight - targets.weeklyLossKg * w).toFixed(1);
-    weightPoints.push({ label: `S${w}`, weight: comp?.weightKg ?? undefined, target: targetW });
+  // Projection à une date donnée depuis S0
+  function projectedAt(dateStr: string): number {
+    const [sy, sm, sd] = challenge.startDate.split('-').map(Number);
+    const [dy, dm, dd] = dateStr.split('-').map(Number);
+    const days = Math.max(0, (new Date(dy, dm - 1, dd).getTime() - new Date(sy, sm - 1, sd).getTime()) / 86400000);
+    return +(s0Weight - targets.weeklyLossKg * (days / 7)).toFixed(1);
   }
 
-  // Pesées quotidiennes depuis les logs
-  const dailyWeights = dailyLogs
-    .filter((l) => l.weightKg != null)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((l) => ({ label: l.date.slice(5), weight: l.weightKg!, target: null as null }));
+  // Mesures réelles : S0 + pesées quotidiennes
+  const actualMeasurements = [
+    ...(s0Comp ? [{ date: s0Comp.date, weight: s0Comp.weightKg }] : []),
+    ...dailyLogs
+      .filter((l) => l.weightKg != null)
+      .map((l) => ({ date: l.date, weight: l.weightKg! })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
 
-  // Graphique : S0 + pesées quotidiennes si dispo, sinon trajectoire cible
-  const chartData = dailyWeights.length >= 1
-    ? [
-        ...(s0Comp ? [{ label: s0Comp.date.slice(5), weight: s0Comp.weightKg, target: null as null }] : []),
-        ...dailyWeights,
-      ].sort((a, b) => a.label.localeCompare(b.label))
-    : weightPoints.filter((p) => p.target !== null);
+  let chartData: { label: string; weight: number | undefined; target: number }[];
+
+  if (actualMeasurements.length >= 1) {
+    // Données réelles + projection en parallèle
+    const points: { label: string; weight: number | undefined; target: number }[] = actualMeasurements.map((p) => ({
+      label: p.date.slice(5),
+      weight: p.weight,
+      target: projectedAt(p.date),
+    }));
+    // Ajouter les points futurs (projection seulement) jusqu'à S8
+    const lastDate = actualMeasurements[actualMeasurements.length - 1].date;
+    for (let w = 1; w <= durationWeeks; w++) {
+      const [sy, sm, sd] = challenge.startDate.split('-').map(Number);
+      const future = new Date(sy, sm - 1, sd);
+      future.setDate(future.getDate() + w * 7);
+      const futureStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
+      if (futureStr > lastDate) {
+        points.push({ label: `S${w}`, weight: undefined as number | undefined, target: projectedAt(futureStr) });
+      }
+    }
+    chartData = points;
+  } else {
+    // Aucune mesure réelle → trajectoire cible seule S0→S8
+    chartData = [
+      { label: 'S0', weight: s0Weight, target: s0Weight },
+      ...Array.from({ length: durationWeeks }, (_, i) => {
+        const w = i + 1;
+        const comp = bodyComps.find((c) => c.weekNumber === w);
+        return { label: `S${w}`, weight: comp?.weightKg ?? undefined, target: +(s0Weight - targets.weeklyLossKg * w).toFixed(1) };
+      }),
+    ];
+  }
 
   const macros = [
     { label: 'Protéines', g: targets.protein, kcal: targets.protein * 4, pct: macroPercents.proteinPct, color: 'var(--blue-bright)' },
