@@ -55,23 +55,33 @@ export default function Nutrition() {
 
   if (actualMeasurements.length >= 1) {
     // Données réelles + projection en parallèle
-    const points: { label: string; weight: number | undefined; target: number }[] = actualMeasurements.map((p) => ({
-      label: p.date.slice(5),
-      weight: p.weight,
-      target: projectedAt(p.date),
-    }));
-    // Ajouter les points futurs (projection seulement) jusqu'à S8
-    const lastDate = actualMeasurements[actualMeasurements.length - 1].date;
+    // Points passés : poids réel seulement (pas de ligne verte sur le passé)
+    const points: { label: string; weight: number | undefined; target: number | undefined }[] =
+      actualMeasurements.map((p, i) => ({
+        label: p.date.slice(5),
+        weight: p.weight,
+        target: i === actualMeasurements.length - 1 ? p.weight : undefined, // jonction sur le dernier point
+      }));
+
+    // Points futurs : projection depuis le dernier poids réel
+    const lastMeasurement = actualMeasurements[actualMeasurements.length - 1];
+    const lastWeight = lastMeasurement.weight;
+    const lastDate = lastMeasurement.date;
+    const [ly, lm, ld] = lastDate.split('-').map(Number);
+    const lastDateObj = new Date(ly, lm - 1, ld);
+
     for (let w = 1; w <= durationWeeks; w++) {
       const [sy, sm, sd] = challenge.startDate.split('-').map(Number);
       const future = new Date(sy, sm - 1, sd);
       future.setDate(future.getDate() + w * 7);
       const futureStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
       if (futureStr > lastDate) {
-        points.push({ label: `S${w}`, weight: undefined as number | undefined, target: projectedAt(futureStr) });
+        const weeksSinceLast = (future.getTime() - lastDateObj.getTime()) / (7 * 86400000);
+        const projected = +(lastWeight - targets.weeklyLossKg * weeksSinceLast).toFixed(1);
+        points.push({ label: `S${w}`, weight: undefined, target: projected });
       }
     }
-    chartData = points;
+    chartData = points as { label: string; weight: number | undefined; target: number }[];
   } else {
     // Aucune mesure réelle → trajectoire cible seule S0→S8
     chartData = [
