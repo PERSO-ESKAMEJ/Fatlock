@@ -61,7 +61,8 @@ export default function Rituals() {
     4: 'thursday', 5: 'friday', 6: 'saturday',
   };
   const defaultDayType: DayType = profile.trainingDays[dowMap[dow]] ?? 'repos';
-  const dayType: DayType = existingLog?.dayType ?? defaultDayType;
+  // Toujours utiliser le planning actuel du profil — si l'utilisateur change son planning, les rituels se mettent à jour immédiatement
+  const dayType: DayType = defaultDayType;
 
   const rituals = isCustom && customRituals
     ? customRituals.map((r) => ({ id: r.id, labelM: r.label, labelF: r.label, points: r.points * 10 }))
