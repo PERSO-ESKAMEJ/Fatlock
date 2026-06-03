@@ -1,4 +1,4 @@
-import { AIAnalysisResult, BodyComposition, WeeklyPhoto, Intensity } from '../types';
+import { AIAnalysisResult, BodyComposition, WeeklyPhoto, Intensity, DailyLog, CustomRitual } from '../types';
 
 interface AIAnalysisParams {
   userId: string;
@@ -10,6 +10,10 @@ interface AIAnalysisParams {
   apiKey: string;
   durationWeeks?: number;
   intensity?: Intensity;
+  weekLogs?: DailyLog[];
+  targetKcal?: number;
+  dailyDeficit?: number;
+  customRituals?: CustomRitual[];
 }
 
 // Seuils de plausibilité de perte de graisse par rythme (% du poids corporel/semaine).
@@ -20,6 +24,57 @@ const INTENSITY_FAT_LOSS: Record<Intensity, { label: string; deficit: string; ma
   standard: { label: 'STANDARD', deficit: '~500 kcal/j', maxPlausiblePct: 0.012, impossiblePct: 0.018 },
   flow:     { label: 'FLOW',     deficit: '~700 kcal/j', maxPlausiblePct: 0.015, impossiblePct: 0.022 },
 };
+
+function buildBehaviorBlock(
+  weekLogs: DailyLog[] | undefined,
+  targetKcal: number | undefined,
+  dailyDeficit: number | undefined,
+  weekNumber: number,
+  customRituals?: CustomRitual[]
+): string {
+  if (!weekLogs || weekLogs.length === 0) return '';
+
+  const sorted = [...weekLogs].sort((a, b) => a.date.localeCompare(b.date));
+  const confirmedCount = sorted.filter((l) => l.codeConfirmed).length;
+
+  const dayDetails = sorted.map((log) => {
+    const keys = Object.keys(log.rituals);
+    const done = Object.values(log.rituals).filter(Boolean).length;
+    const total = keys.length > 0 ? keys.length : (customRituals?.length ?? '?');
+    const pct = typeof total === 'number' && total > 0 ? Math.round((done / total) * 100) : '?';
+    return `${log.date.slice(5)}: ${done}/${total} (${pct}%)`;
+  }).join(' · ');
+
+  const pcts = sorted
+    .map((log) => {
+      const keys = Object.keys(log.rituals);
+      const done = Object.values(log.rituals).filter(Boolean).length;
+      return keys.length > 0 ? done / keys.length : null;
+    })
+    .filter((v): v is number => v !== null);
+  const avgPct = pcts.length > 0 ? Math.round((pcts.reduce((s, v) => s + v, 0) / pcts.length) * 100) : 0;
+  const perfectDays = pcts.filter((p) => p >= 0.99).length;
+
+  const dailyWeights = sorted.filter((l) => l.weightKg != null).map((l) => `${l.date.slice(5)}: ${l.weightKg} kg`).join(', ');
+
+  let block = `\nCOMPORTEMENT DÉCLARÉ (semaine ${weekNumber})
+- Jours avec code confirmé : ${confirmedCount}/7
+- Complétion des rituels : ${dayDetails}
+- Moyenne hebdomadaire : ${avgPct}% · Jours à 100% : ${perfectDays}/7`;
+
+  if (targetKcal && dailyDeficit) {
+    const maxFatLoss = ((dailyDeficit * 7) / 7700).toFixed(2);
+    block += `\n- Objectif calorique : ${targetKcal} kcal/j · Déficit déclaré : ~${dailyDeficit} kcal/j → perte de graisse théorique max : ~${maxFatLoss} kg/semaine`;
+  }
+  if (dailyWeights) block += `\n- Pesées quotidiennes : ${dailyWeights}`;
+
+  block += `\n\nRÈGLE COMPORTEMENTALE — intègre dans les rubriques 1 et 2 :
+- ${perfectDays === 7 ? 'TOUS les jours à 100% : statistiquement très rare — croise avec les données biologiques avant de valider.' : perfectDays >= 5 ? `${perfectDays}/7 jours à 100% : inhabituel mais possible.` : 'Complétion variable : réaliste.'}
+- ${confirmedCount === 0 ? '0 jours confirmés + résultats déclarés = incohérence forte à signaler.' : confirmedCount <= 2 ? 'Très peu de jours confirmés : cohérence avec une forte perte de graisse est douteuse.' : ''}
+${targetKcal && dailyDeficit ? `- Un déficit de ${dailyDeficit} kcal/j ne peut pas produire plus de ~${((dailyDeficit * 7) / 7700).toFixed(2)} kg de graisse réelle/semaine (hors eau).` : ''}\n`;
+
+  return block;
+}
 
 function parseBase64(dataUrl: string): { mediaType: string; data: string } {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -37,7 +92,8 @@ function buildPrompt(
   prevCompo: BodyComposition | null,
   hasPrevPhoto: boolean,
   durationWeeks = 8,
-  intensity: Intensity = 'standard'
+  intensity: Intensity = 'standard',
+  behaviorBlock = ''
 ): string {
   const mgPct = ((currCompo.fatMassKg / currCompo.weightKg) * 100).toFixed(1);
   const eauPct = currCompo.waterPercent?.toFixed(0) ?? 'N/A';
@@ -54,7 +110,7 @@ function buildPrompt(
 
     return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne ou claim physiologiquement impossible.
 
-${intensityBlock}CONTEXTE PHOTO
+${intensityBlock}${behaviorBlock}CONTEXTE PHOTO
 Tu reçois 1 seule photo : celle de la Semaine 1. Aucune photo antérieure n'est disponible. Tu ne peux donc PAS évaluer une évolution visuelle — n'invente aucune progression.
 
 DONNÉES DÉCLARÉES
@@ -106,7 +162,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 
     return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
-${intensityBlock}ORDRE DES PHOTOS — IMPORTANT
+${intensityBlock}${behaviorBlock}ORDRE DES PHOTOS — IMPORTANT
 Tu reçois 2 photos dans cet ordre exact :
 1) Photo 1 = état de DÉPART (S0, avant le challenge)
 2) Photo 2 = Semaine 1 (S1, après une semaine)
@@ -165,7 +221,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 
   return `Tu es un juge d'intégrité pour un challenge de transformation physique sur ${durationWeeks} semaines. Tu évalues la CRÉDIBILITÉ des données déclarées par un participant, pas sa performance. Score élevé = données cohérentes et plausibles. Score bas = incohérence interne, claim impossible ou photo non authentique.
 
-${intensityBlock}ORDRE DES PHOTOS — IMPORTANT
+${intensityBlock}${behaviorBlock}ORDRE DES PHOTOS — IMPORTANT
 ${hasPrevPhoto
   ? `Tu reçois 2 photos dans cet ordre exact :\n1) Photo 1 = semaine précédente S${weekNumber - 1}\n2) Photo 2 = semaine actuelle S${weekNumber}\nCompare TOUJOURS la photo 2 par rapport à la photo 1.`
   : `Tu reçois 1 seule photo : la semaine actuelle S${weekNumber}. Aucune comparaison visuelle possible, n'invente aucune progression.`}
@@ -336,10 +392,11 @@ export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAI
 }
 
 export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
-  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8, intensity = 'standard' } = params;
+  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8, intensity = 'standard', weekLogs, targetKcal, dailyDeficit, customRituals } = params;
 
   const hasPrevPhoto = !!prevPhoto;
-  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks, intensity);
+  const behaviorBlock = buildBehaviorBlock(weekLogs, targetKcal, dailyDeficit, weekNumber, customRituals);
+  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks, intensity, behaviorBlock);
 
   // Photos : prev (AVANT) d'abord, puis current (APRÈS)
   const images: object[] = [];

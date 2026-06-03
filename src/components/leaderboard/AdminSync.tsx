@@ -6,6 +6,7 @@ import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysis
 import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints, calcAIBonus } from '../../lib/scoring';
 import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
+import { calculateTargets } from '../../lib/nutrition';
 import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
 import { getPhotosByWeek } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
@@ -265,6 +266,24 @@ export default function AdminSync() {
         const prevComp = rComps.length > 1 ? rComps[rComps.length - 2] : null;
         const prevPhotos = await getPhotosByWeek(recap.profile.id, currentWeek - 1) ?? undefined;
 
+        // Logs de la semaine courante pour ce participant
+        const [csy, csm, csd] = challenge.startDate.split('-').map(Number);
+        const cwStart = new Date(csy, csm - 1, csd);
+        cwStart.setDate(cwStart.getDate() + (currentWeek - 1) * 7);
+        const cwEnd = new Date(csy, csm - 1, csd);
+        cwEnd.setDate(cwEnd.getDate() + currentWeek * 7);
+        const cwStartStr = cwStart.toISOString().slice(0, 10);
+        const cwEndStr = cwEnd.toISOString().slice(0, 10);
+        const participantWeekLogs = recap.dailyLogs.filter(
+          (l) => l.date >= cwStartStr && l.date < cwEndStr
+        );
+
+        // Objectifs caloriques du participant
+        const weightDirection = challenge.customSettings?.weightDirection ?? 'down';
+        const participantTargets = calculateTargets(recap.profile, latestComp.weightKg, durationWeeks, weightDirection);
+        const participantDeficit = Math.max(0, participantTargets.effectiveTdee - participantTargets.targetKcal);
+        const participantCustomRituals = challenge.challengeType === 'custom' ? challenge.customSettings?.rituals : undefined;
+
         setAiProgress(recap.profile.name);
         try {
           const result = await runAIAnalysis({
@@ -277,6 +296,10 @@ export default function AdminSync() {
             apiKey: challenge.anthropicApiKey,
             durationWeeks,
             intensity: recap.profile.intensity,
+            weekLogs: participantWeekLogs,
+            targetKcal: participantTargets.targetKcal,
+            dailyDeficit: participantDeficit,
+            customRituals: participantCustomRituals,
           });
           addAIResult(result);
           collectedAiResults.push(result);
