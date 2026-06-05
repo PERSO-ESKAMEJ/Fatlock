@@ -120,9 +120,15 @@ DONNÉES DÉCLARÉES
 - Eau : ${eauPct} %
 - Variation vs mesure de départ : poids ${dPoids} kg | masse grasse ${dMG} kg | masse musculaire ${dMM} kg
 
-RÈGLES PHYSIOLOGIQUES
-- En semaine 1, une forte perte de poids est NORMALE (eau, glycogène, déshydratation). Ne la pénalise pas.
-- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et attribuent souvent la perte d'eau à de la graisse. En S1, une perte de masse grasse déclarée élevée n'est donc PAS un indice de triche.
+RÈGLES PHYSIOLOGIQUES — CONTEXTE DÉBUT DE CHALLENGE (S1)
+La transition d'une alimentation riche en glucides simples/aliments transformés vers une alimentation saine et protéinée provoque en S1 des effets massifs SANS lien avec la triche :
+- Dépletion du glycogène musculaire et hépatique → libère 2 à 4 kg d'eau liée (1g glycogène = 3-4g eau)
+- Réduction de la rétention d'eau inflammatoire due aux aliments transformés
+- Réduction du bol alimentaire (aliments plus denses, moins de volume intestinal)
+- Résultat : perte de poids apparente de 2 à 6 kg en S1, dont la quasi-totalité est de l'eau — PAS de la graisse réelle.
+De plus, les mesures S0 ont pu être prises sans jeûne (après un repas normal, en soirée) alors que S1 est pris le matin à jeun. Cet écart de conditions peut créer un gap supplémentaire de 1 à 3 kg qui ne reflète aucune perte réelle.
+CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéficier de la tolérance maximale. Ne pénalise JAMAIS une forte perte en S1.
+- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse.
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg sur une photo. L'absence de changement visible est normale.
 
@@ -175,9 +181,15 @@ DONNÉES DÉCLARÉES
 - Eau : ${eauPct} %
 - Variation S0 → S1 : poids ${dPoids} kg | masse grasse ${dMG} kg | masse musculaire ${dMM} kg
 
-RÈGLES PHYSIOLOGIQUES
-- En semaine 1, une forte perte de poids est NORMALE (eau, glycogène). Ne la pénalise pas.
-- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent souvent perte d'eau et graisse. Une perte de masse grasse déclarée élevée en S1 n'est donc PAS un indice de triche.
+RÈGLES PHYSIOLOGIQUES — CONTEXTE DÉBUT DE CHALLENGE (S1)
+La transition d'une alimentation riche en glucides simples/aliments transformés vers une alimentation saine et protéinée provoque en S1 des effets massifs SANS lien avec la triche :
+- Dépletion du glycogène musculaire et hépatique → libère 2 à 4 kg d'eau liée (1g glycogène = 3-4g eau)
+- Réduction de la rétention d'eau inflammatoire due aux aliments transformés
+- Réduction du bol alimentaire (aliments plus denses, moins de volume intestinal)
+- Résultat : perte de poids apparente de 2 à 6 kg en S1, dont la quasi-totalité est de l'eau — PAS de la graisse réelle.
+De plus, la photo et mesure S0 ont pu être prises sans jeûne (après un repas normal, en soirée) alors que S1 est pris le matin à jeun. Cet écart de conditions peut créer un gap supplémentaire de 1 à 3 kg qui ne reflète aucune perte réelle. La photo S0 peut aussi montrer une silhouette plus gonflée qu'en réalité pour cette raison.
+CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéficier de la tolérance maximale. Ne pénalise JAMAIS une forte perte en S1.
+- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse.
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg entre deux photos. Ne rien voir de différent est NORMAL, jamais suspect.
 
@@ -233,8 +245,10 @@ DONNÉES DÉCLARÉES
 - Eau : ${eauPct} %
 - Variation vs semaine précédente : poids ${dPoids} kg | masse grasse ${dMG} kg | masse musculaire ${dMM} kg
 
-RÈGLES PHYSIOLOGIQUES (semaine 2+)
-- L'eau et le glycogène sont désormais stabilisés : la tolérance de la S1 ne s'applique PLUS.
+RÈGLES PHYSIOLOGIQUES (semaine ${weekNumber})
+${weekNumber === 2
+  ? `- S2 : la transition alimentaire peut encore produire des effets résiduels de dépletion glycogénique et réduction d'eau inflammatoire. Une perte supérieure à ${maxPlausibleKg} kg reste possible sans être suspecte si S1 était exceptionnel. Applique une tolérance modérée.\n- Les mesures S0 ayant pu être prises hors jeûne (après repas), l'écart de conditions avec S2 peut encore amplifier les chiffres déclarés sans triche.`
+  : `- À partir de S2, la dépletion en eau et glycogène est largement stabilisée. Applique les seuils du rythme déclaré.`}
 - Rythme ${ic.label} : perte de graisse plausible ≤ ${maxPlausibleKg} kg/semaine (déficit ${ic.deficit} + marge d'impédance). Au-delà de ${impossibleKg} kg : impossible à ce rythme.
 - Les balances à impédance gardent ±1 à 2 kg d'erreur sur la masse grasse.
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
