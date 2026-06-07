@@ -68,10 +68,30 @@ function buildBehaviorBlock(
   }
   if (dailyWeights) block += `\n- Pesées quotidiennes : ${dailyWeights}`;
 
-  block += `\n\nRÈGLE COMPORTEMENTALE — intègre dans les rubriques 1 et 2 :
-- ${perfectDays === 7 ? 'TOUS les jours à 100% : statistiquement très rare — croise avec les données biologiques avant de valider.' : perfectDays >= 5 ? `${perfectDays}/7 jours à 100% : inhabituel mais possible.` : 'Complétion variable : réaliste.'}
-- ${confirmedCount === 0 ? '0 jours confirmés + résultats déclarés = incohérence forte à signaler.' : confirmedCount <= 2 ? 'Très peu de jours confirmés : cohérence avec une forte perte de graisse est douteuse.' : ''}
-${targetKcal && dailyDeficit ? `- Un déficit de ${dailyDeficit} kcal/j ne peut pas produire plus de ~${((dailyDeficit * 7) / 7700).toFixed(2)} kg de graisse réelle/semaine (hors eau).` : ''}\n`;
+  const maxFatFromDeficit = targetKcal && dailyDeficit ? ((dailyDeficit * 7) / 7700).toFixed(2) : null;
+
+  block += `\n\nLIMITATIONS DES BALANCES À IMPÉDANCE (BIA) — contexte critique
+Les balances BIA (InBody, Tanita, appareils de salle de sport) mesurent la résistance électrique au courant, puis infèrent la composition corporelle via une formule qui suppose une hydratation constante de la masse maigre (~73%). Ce modèle produit des erreurs systématiques dans ces situations :
+- Entraînement dans les 12h précédant la mesure → déplétion glycogénique → moins d'eau dans les muscles → machine sous-estime la masse musculaire et surestime la graisse
+- Jeûne prolongé (OMAD, jeûne intermittent) → même effet
+- Mesure prise dans des conditions différentes de S0 (heure, repas, hydratation) → comparaison invalide
+- Marge d'erreur sur le % de masse grasse : ±2 à 3% selon les études — une variation de 1% entre deux semaines est dans le bruit de mesure
+- Une perte de poids réelle combinée à une légère hausse de % graisse peut indiquer uniquement une perte d'eau musculaire, pas une réalité biologique.
+
+RAISONNEMENT DIAGNOSTIQUE — tu dois systématiquement distinguer ces deux cas :
+
+CAS 1 — ARTEFACT DE MESURE (comportement fort + résultats BIA incohérents) :
+Indicateurs : rituels complétés à ≥60% en moyenne, ≥4 jours confirmés, entraînements effectués, pesées quotidiennes montrant une tendance à la baisse, déficit calorique respecté.
+→ Les résultats BIA contradictoires (ex : perte de poids mais hausse du % graisse) s'expliquent par les biais de la balance. Préconise une remesure en conditions standard : matin à jeun, 12h sans entraînement, même appareil, même heure.
+
+CAS 2 — NON-RESPECT DU PROGRAMME (comportement faible + résultats stagnants) :
+Indicateurs : <40% de complétion des rituels, <3 jours confirmés, pas de pesées quotidiennes, stagnation ou régression sans explication hydrique.
+→ La stagnation est cohérente avec un manque de rigueur sur la diète et les entraînements. Signal d'alerte sur la crédibilité déclarée.
+
+CAS MIXTE : comportement moyen + résultats ambigus → mentionne les deux hypothèses sans trancher.
+${targetKcal && dailyDeficit ? `\n- Rappel : déficit de ${dailyDeficit} kcal/j → perte de graisse réelle max théorique ~${maxFatFromDeficit} kg/semaine (hors eau).` : ''}
+${perfectDays === 7 ? '\n- TOUS les jours à 100% : croise avec les données biologiques — si les résultats ne suivent pas, incohérence probable.' : ''}
+${confirmedCount === 0 ? '\n- 0 jours confirmés + résultats déclarés positifs = incohérence forte.' : confirmedCount <= 2 ? '\n- Très peu de jours confirmés : cohérence avec une perte significative est douteuse.' : ''}\n`;
 
   return block;
 }
@@ -157,7 +177,7 @@ GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (tot
 SCORE FINAL = somme des 4 rubriques.
 
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<2 à 3 phrases en français, directes et factuelles, expliquant les points retirés. Aucun jugement moral, aucun conseil.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
   }
 
   // ── VERSION 2 : Semaine 1, avec photo S0 ────────────────────────────────────
@@ -223,7 +243,7 @@ GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (tot
 SCORE FINAL = somme des 5 rubriques.
 
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<2 à 3 phrases en français, directes et factuelles, expliquant les points retirés. Aucun jugement moral, aucun conseil.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
   }
 
   // ── VERSION 3 : Semaine 2+, avec ou sans photo précédente ───────────────────
@@ -286,7 +306,7 @@ ${hasPrevPhoto
 SCORE FINAL = somme des rubriques applicables (voir condition rubrique 5).
 
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<2 à 3 phrases en français, directes et factuelles, expliquant les points retirés. Aucun jugement moral, aucun conseil.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
 }
 
 // ── Analyse IA finale S0→S8 ───────────────────────────────────────────────────
