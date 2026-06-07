@@ -10,6 +10,7 @@ interface AIAnalysisParams {
   apiKey: string;
   durationWeeks?: number;
   intensity?: Intensity;
+  sex?: 'M' | 'F';
   weekLogs?: DailyLog[];
   targetKcal?: number;
   dailyDeficit?: number;
@@ -106,6 +107,27 @@ function fmt(n: number, decimals = 1): string {
   return (n >= 0 ? '+' : '') + n.toFixed(decimals);
 }
 
+function buildEgoVoiceBlock(sex: 'M' | 'F' | undefined): string {
+  if (sex === 'M') {
+    return `
+VOIX FATLOCK — ÉGO MASCULIN
+Tu es aussi le coach qui parle à cet homme après le verdict. Ton ton : direct, brutal, compétitif. Pas de consolation molle. L'ego masculin se forge dans la vérité, pas le confort.
+- Si comportement fort malgré résultats trompeurs → stimule : "Ton ego a tenu. Les chiffres mentent, la discipline ne ment pas."
+- Si résultats excellents → challenge de ne pas s'arrêter : "Tu avances. L'Apex ne s'installe pas — il continue."
+- Si comportement faible → réprimande directe sans pitié : "Ton ego mérite mieux que ça. Les excuses ne transforment pas un corps."
+- Si cohérence parfaite → valide et pousse plus loin : "C'est ça. Maintenant creuse encore."
+Le champ "motivation" doit être 1 à 2 phrases percutantes, style Blue Lock, qui stimulent l'égo masculin selon le diagnostic.`;
+  }
+  return `
+VOIX FATLOCK — ÉGO FÉMININ
+Tu es aussi le coach qui parle à cette femme après le verdict. Ton ton : puissant, identitaire, sans complaisance. L'ego féminin se révèle dans la constance et la fierté du processus.
+- Si comportement fort malgré résultats trompeurs → honore la rigueur : "Tu n'as pas transigé. Les chiffres de la machine ne définissent pas ta transformation."
+- Si résultats excellents → célèbre et challenge : "Tu forges quelque chose de rare. Ne t'arrête pas au seuil de l'élite."
+- Si comportement faible → interpelle l'identité : "Le corps se souvient de chaque choix. Cette semaine, que lui as-tu dit ?"
+- Si cohérence parfaite → valide avec intensité : "C'est exactement ça. Continue à être sans concession."
+Le champ "motivation" doit être 1 à 2 phrases percutantes, style Blue Lock, qui stimulent l'égo féminin selon le diagnostic.`;
+}
+
 function buildPrompt(
   weekNumber: number,
   currCompo: BodyComposition,
@@ -113,8 +135,10 @@ function buildPrompt(
   hasPrevPhoto: boolean,
   durationWeeks = 8,
   intensity: Intensity = 'standard',
-  behaviorBlock = ''
+  behaviorBlock = '',
+  sex?: 'M' | 'F'
 ): string {
+  const egoBlock = buildEgoVoiceBlock(sex);
   const mgPct = ((currCompo.fatMassKg / currCompo.weightKg) * 100).toFixed(1);
   const eauPct = currCompo.waterPercent?.toFixed(0) ?? 'N/A';
   const ic = INTENSITY_FAT_LOSS[intensity];
@@ -175,9 +199,9 @@ GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (tot
    0  : contradiction flagrante (ex : 10 % déclaré mais aucune définition visible, ou silhouette nettement plus grasse)
 
 SCORE FINAL = somme des 4 rubriques.
-
+${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
   }
 
   // ── VERSION 2 : Semaine 1, avec photo S0 ────────────────────────────────────
@@ -241,9 +265,9 @@ GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (tot
    0  : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU la silhouette contredit franchement la direction déclarée
 
 SCORE FINAL = somme des 5 rubriques.
-
+${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
   }
 
   // ── VERSION 3 : Semaine 2+, avec ou sans photo précédente ───────────────────
@@ -304,9 +328,9 @@ ${hasPrevPhoto
   : `   Tu n'as reçu qu'1 photo. N'applique PAS cette rubrique 5. Note uniquement les rubriques 1 à 4 (total /80) puis multiplie le score final par 1,25 pour le ramener sur 100.`}
 
 SCORE FINAL = somme des rubriques applicables (voir condition rubrique 5).
-
+${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
-{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases en français, directes et factuelles : (1) ce que les données montrent, (2) diagnostic CAS 1 ou CAS 2 ou mixte, (3) recommandation concrète adaptée au diagnostic. Aucun jugement moral.>"}`;
+{"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
 }
 
 // ── Analyse IA finale S0→S8 ───────────────────────────────────────────────────
@@ -426,11 +450,11 @@ export async function runFinalAIAnalysis(params: FinalAIParams): Promise<FinalAI
 }
 
 export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysisResult> {
-  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8, intensity = 'standard', weekLogs, targetKcal, dailyDeficit, customRituals } = params;
+  const { userId, weekNumber, prevCompo, currCompo, photo, prevPhoto, apiKey, durationWeeks = 8, intensity = 'standard', sex, weekLogs, targetKcal, dailyDeficit, customRituals } = params;
 
   const hasPrevPhoto = !!prevPhoto;
   const behaviorBlock = buildBehaviorBlock(weekLogs, targetKcal, dailyDeficit, weekNumber, customRituals);
-  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks, intensity, behaviorBlock);
+  const prompt = buildPrompt(weekNumber, currCompo, prevCompo, hasPrevPhoto, durationWeeks, intensity, behaviorBlock, sex);
 
   // Photos : prev (AVANT) d'abord, puis current (APRÈS)
   const images: object[] = [];
@@ -477,7 +501,7 @@ export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysi
 
   const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
 
-  let parsed: { credibilityScore: number; analysis: string };
+  let parsed: { credibilityScore: number; analysis: string; motivation?: string };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -494,6 +518,7 @@ export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysi
     weekNumber,
     credibilityScore: Math.max(0, Math.min(100, Math.round(parsed.credibilityScore))),
     analysis: parsed.analysis,
+    motivation: parsed.motivation,
     generatedAt: new Date().toISOString(),
   };
 }

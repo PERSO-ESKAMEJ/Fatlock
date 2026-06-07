@@ -296,6 +296,7 @@ export default function AdminSync() {
             apiKey: challenge.anthropicApiKey,
             durationWeeks,
             intensity: recap.profile.intensity,
+            sex: recap.profile.sex,
             weekLogs: participantWeekLogs,
             targetKcal: participantTargets.targetKcal,
             dailyDeficit: participantDeficit,

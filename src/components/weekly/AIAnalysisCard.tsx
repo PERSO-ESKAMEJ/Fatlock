@@ -50,6 +50,22 @@ export default function AIAnalysisCard({ result, showPrivate = false }: AIAnalys
           {result.analysis}
         </div>
       )}
+
+      {result.motivation && (
+        <div
+          className="p-3 rounded-lg text-sm font-bold leading-snug"
+          style={{
+            background: 'rgba(255,194,61,0.07)',
+            border: '1px solid rgba(255,194,61,0.25)',
+            color: 'var(--gold)',
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {result.motivation}
+        </div>
+      )}
     </div>
   );
 }

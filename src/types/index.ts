@@ -125,6 +125,7 @@ export interface AIAnalysisResult {
   weekNumber: number;
   credibilityScore: number;
   analysis: string;
+  motivation?: string;
   generatedAt: string;
 }
 
