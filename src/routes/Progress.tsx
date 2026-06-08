@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
-import { getCurrentWeek, getChallengeState } from '../store/useChallengeStore';
+import { getCurrentWeek, getCheckinWeek, getChallengeState } from '../store/useChallengeStore';
 import { calculateTargets } from '../lib/nutrition';
 import { getPhotosByWeek } from '../lib/db';
 import { WeeklyPhoto } from '../types';
@@ -22,12 +22,8 @@ export default function Progress() {
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
-  const [spy, spm, spd] = challenge.startDate.split('-').map(Number);
-  const startLocalP = new Date(spy, spm - 1, spd);
-  const nowLocalP = new Date();
-  const todayMidnightP = new Date(nowLocalP.getFullYear(), nowLocalP.getMonth(), nowLocalP.getDate());
-  const diffDaysP = Math.floor((todayMidnightP.getTime() - startLocalP.getTime()) / 86400000);
-  const checkinDue = challengeState === 'active' && diffDaysP >= 6 && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
+  const checkinDue = challengeState === 'active' && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
@@ -117,11 +113,11 @@ export default function Progress() {
         <div
           className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:opacity-90 transition-all"
           style={{ background: 'linear-gradient(135deg, rgba(47,123,255,0.15), rgba(0,212,255,0.1))', border: '1px solid var(--blue)' }}
-          onClick={() => navigate('/checkin')}
+          onClick={() => navigate(`/checkin?week=${checkinWeek}`)}
         >
           <div>
             <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--blue-bright)' }}>
-              Check-in Semaine {currentWeek} disponible
+              Check-in Semaine {checkinWeek} disponible
             </div>
             <div className="text-sm text-[var(--muted)]">Photos · Composition corporelle · Analyse IA</div>
           </div>

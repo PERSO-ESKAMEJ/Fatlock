@@ -7,7 +7,7 @@ import RankCard from '../components/dashboard/RankCard';
 import CountdownBar from '../components/dashboard/CountdownBar';
 import NutritionSnapshot from '../components/dashboard/NutritionSnapshot';
 import TodaySummary from '../components/dashboard/TodaySummary';
-import { getChallengeState, getCurrentWeek, getDaysUntilStart } from '../store/useChallengeStore';
+import { getChallengeState, getCurrentWeek, getCheckinWeek, getDaysUntilStart } from '../store/useChallengeStore';
 import PrelaunchGuide from '../components/dashboard/PrelaunchGuide';
 
 export default function Dashboard() {
@@ -18,14 +18,9 @@ export default function Dashboard() {
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const state = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
   const s0Done = bodyComps.some((c) => c.weekNumber === 0);
-  // Don't show check-in on J1–J6 — user needs to complete the week first (min 6 days elapsed)
-  const [sy, sm, sd] = challenge.startDate.split('-').map(Number);
-  const startLocal = new Date(sy, sm - 1, sd);
-  const todayLocal = new Date();
-  const todayMidnight = new Date(todayLocal.getFullYear(), todayLocal.getMonth(), todayLocal.getDate());
-  const diffDaysSinceStart = Math.floor((todayMidnight.getTime() - startLocal.getTime()) / 86400000);
-  const checkinDue = state === 'active' && diffDaysSinceStart >= 6 && !bodyComps.some((c) => c.weekNumber === currentWeek);
+  const checkinDue = state === 'active' && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
 
   const greeting = profile.sex === 'M'
     ? `Ton ego forge sa légende, ${profile.name}.`
@@ -210,11 +205,11 @@ export default function Dashboard() {
         <div
           className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, rgba(47,123,255,0.15), rgba(0,212,255,0.1))', border: '1px solid var(--blue)' }}
-          onClick={() => navigate('/checkin')}
+          onClick={() => navigate(`/checkin?week=${checkinWeek}`)}
         >
           <div>
             <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--blue-bright)' }}>
-              Check-in Semaine {currentWeek}
+              Check-in Semaine {checkinWeek}
             </div>
             <div className="text-sm text-[var(--muted)]">Pèse-toi · Documente ta transformation · L'IA t'évalue</div>
           </div>

@@ -24,7 +24,8 @@ export default function WeeklyCheckin() {
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const isBaseline = searchParams.get('week') === '0';
-  const targetWeek = isBaseline ? 0 : currentWeek;
+  const weekParam = Number(searchParams.get('week'));
+  const targetWeek = isBaseline ? 0 : (weekParam > 0 ? weekParam : currentWeek);
 
   const trackPhotos = challenge.challengeType === 'custom'
     ? (challenge.customSettings?.trackPhotos ?? 'required')
@@ -40,7 +41,7 @@ export default function WeeklyCheckin() {
   const userComps = bodyCompositions.filter((c) => c.userId === profile.id);
   const previousComp = isBaseline
     ? undefined
-    : userComps.find((c) => c.weekNumber === currentWeek - 1) ?? userComps[userComps.length - 1];
+    : userComps.find((c) => c.weekNumber === targetWeek - 1) ?? userComps[userComps.length - 1];
   const alreadyDone = userComps.some((c) => c.weekNumber === targetWeek);
 
   function handleCompSave(comp: BodyComposition) {
@@ -71,9 +72,9 @@ export default function WeeklyCheckin() {
       if (!isBaseline) {
         const challengeStart = new Date(challenge.startDate + 'T12:00:00');
         const weekStartDate = new Date(challengeStart);
-        weekStartDate.setDate(challengeStart.getDate() + (currentWeek - 1) * 7);
+        weekStartDate.setDate(challengeStart.getDate() + (targetWeek - 1) * 7);
         const weekEndDate = new Date(challengeStart);
-        weekEndDate.setDate(challengeStart.getDate() + currentWeek * 7);
+        weekEndDate.setDate(challengeStart.getDate() + targetWeek * 7);
         const weekStartStr = weekStartDate.toISOString().slice(0, 10);
         const weekEndStr = weekEndDate.toISOString().slice(0, 10);
         const weekLogs = dailyLogs.filter(
@@ -89,7 +90,7 @@ export default function WeeklyCheckin() {
         const elapsedDays = Math.min(7, Math.max(1, Math.floor((todayMidnight.getTime() - weekStartDate.getTime()) / 86400000) + 1));
         const score = buildWeeklyScore(
           profile.id,
-          currentWeek,
+          targetWeek,
           weekLogs,
           profile.intensity,
           startComp,
@@ -103,7 +104,7 @@ export default function WeeklyCheckin() {
         addWeeklyScore(score);
       }
 
-      showToast(isBaseline ? 'Mesures de départ enregistrées !' : `Semaine ${currentWeek} validée !`, 'success');
+      showToast(isBaseline ? 'Mesures de départ enregistrées !' : `Semaine ${targetWeek} validée !`, 'success');
       setStep(3);
     } catch (err) {
       showToast('Erreur lors de la sauvegarde', 'error');
@@ -153,11 +154,11 @@ export default function WeeklyCheckin() {
   // Check-ins hebdomadaires : une seule validation par semaine
   if (!isBaseline && alreadyDone && step !== 3) {
     return (
-      <PageWrapper title={`Check-in S${currentWeek}`}>
+      <PageWrapper title={`Check-in S${targetWeek}`}>
         <div className="panel p-6 text-center">
           <div className="text-4xl mb-3">✅</div>
           <div className="font-bold text-lg text-[var(--ink)] mb-1">
-            Semaine {currentWeek} déjà validée
+            Semaine {targetWeek} déjà validée
           </div>
           <p className="text-sm text-[var(--muted)]">
             Reviens la semaine prochaine pour le prochain check-in.
@@ -167,7 +168,7 @@ export default function WeeklyCheckin() {
     );
   }
 
-  const pageTitle = isBaseline ? 'Mesures de départ — S0' : `Check-in Semaine ${currentWeek}`;
+  const pageTitle = isBaseline ? 'Mesures de départ — S0' : `Check-in Semaine ${targetWeek}`;
 
   return (
     <PageWrapper title={pageTitle}>
@@ -241,7 +242,7 @@ export default function WeeklyCheckin() {
       {step === 3 && savedComp && (
         <div className="space-y-4">
           <h2 className="font-bold text-[var(--ink)]">
-            {isBaseline ? 'Confirmation — Mesures S0' : `Confirmation — Semaine ${currentWeek}`}
+            {isBaseline ? 'Confirmation — Mesures S0' : `Confirmation — Semaine ${targetWeek}`}
           </h2>
 
           <div className="panel2 p-4 space-y-2 text-sm">
@@ -273,7 +274,7 @@ export default function WeeklyCheckin() {
             <div className="panel p-4 text-center text-[var(--green)]">
               <div className="text-3xl mb-2">✅</div>
               <div className="font-bold">
-                {isBaseline ? 'Mesures S0 enregistrées !' : `Semaine ${currentWeek} validée !`}
+                {isBaseline ? 'Mesures S0 enregistrées !' : `Semaine ${targetWeek} validée !`}
               </div>
               {!isBaseline && (
                 <p className="text-sm text-[var(--muted)] mt-1">Exporte ton récap depuis le classement pour partager avec l'admin.</p>
@@ -283,7 +284,7 @@ export default function WeeklyCheckin() {
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setStep(2)}>← Retour</Button>
               <Button className="flex-1" onClick={handleConfirm} loading={saving}>
-                {isBaseline ? 'Enregistrer mes mesures S0' : `Valider la semaine ${currentWeek}`}
+                {isBaseline ? 'Enregistrer mes mesures S0' : `Valider la semaine ${targetWeek}`}
               </Button>
             </div>
           )}

@@ -61,6 +61,18 @@ export function getChallengeState(startDate: string, durationWeeks = 8): 'pendin
   return 'active';
 }
 
+// Semaine dont le check-in doit être proposé : la fenêtre de S{N} s'ouvre le J7 de
+// la semaine N et reste ouverte jusqu'à la veille de l'ouverture de S{N+1} (J7 de N+1 - 1),
+// ce qui laisse une semaine pleine pour rattraper un check-in manqué.
+// Retourne 0 si aucune fenêtre n'est encore ouverte.
+export function getCheckinWeek(startDate: string, durationWeeks = 8): number {
+  const start = parseLocalDate(startDate);
+  const today = localMidnight();
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / 86400000);
+  const week = Math.floor((diffDays + 1) / 7);
+  return Math.min(durationWeeks, Math.max(0, week));
+}
+
 export function getDaysUntilStart(startDate: string): number {
   const start = parseLocalDate(startDate);
   const today = localMidnight();
