@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
-import { getCurrentWeek, getChallengeEndDate, getChallengeState, getDaysUntilStart } from '../store/useChallengeStore';
+import { getCheckinWeek, getChallengeEndDate, getChallengeState, getDaysUntilStart } from '../store/useChallengeStore';
 import { generateRecapFile, exportRecapAsFile } from '../lib/recap';
 import { getPhotosByWeek } from '../lib/db';
 import { supabase } from '../lib/supabase';
@@ -28,7 +28,7 @@ export default function Leaderboard() {
 
   const navigate = useNavigate();
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
-  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
 
   if (challengeState === 'pending') {
@@ -58,7 +58,7 @@ export default function Leaderboard() {
     setExportLoading(true);
     try {
       const allPhotos = [];
-      for (let w = 0; w <= currentWeek; w++) {
+      for (let w = 0; w <= checkinWeek; w++) {
         const p = await getPhotosByWeek(profile.id, w);
         if (p) allPhotos.push(p);
       }
@@ -66,11 +66,11 @@ export default function Leaderboard() {
       const recap = await generateRecapFile(
         profile,
         challenge.id,
-        currentWeek,
+        checkinWeek,
         dailyLogs.filter((l) => l.userId === profile.id && l.date >= challenge.startDate && l.date <= challengeEnd),
-        bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= currentWeek),
+        bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= checkinWeek),
         allPhotos,
-        weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= currentWeek),
+        weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= checkinWeek),
       );
       exportRecapAsFile(recap);
 
@@ -82,7 +82,7 @@ export default function Leaderboard() {
         const { error } = await sb.from('recaps').upsert({
           challenge_id: challenge.id,
           user_id: profile.id,
-          week_number: currentWeek,
+          week_number: checkinWeek,
           exported_at: new Date().toISOString(),
           data: recapWithoutPhotos,
         }, { onConflict: 'challenge_id,user_id,week_number' });
@@ -289,7 +289,7 @@ export default function Leaderboard() {
                 onClick={handleExportRecap}
                 loading={exportLoading}
               >
-                Envoyer mon récap S{currentWeek}
+                Envoyer mon récap S{checkinWeek}
               </Button>
             </div>
           )}
