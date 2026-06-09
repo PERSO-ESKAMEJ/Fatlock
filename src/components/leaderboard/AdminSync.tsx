@@ -4,7 +4,7 @@ import { useLogStore } from '../../store/useLogStore';
 import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
 import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints, calcAIBonus } from '../../lib/scoring';
-import { getCurrentWeek, getChallengeEndDate } from '../../store/useChallengeStore';
+import { getCheckinWeek, getChallengeEndDate } from '../../store/useChallengeStore';
 import { runAIAnalysis } from '../../lib/aiAnalysis';
 import { calculateTargets } from '../../lib/nutrition';
 import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
@@ -40,7 +40,7 @@ export default function AdminSync() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
-  const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
+  const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
   const sb = supabase();
 
   async function fetchStatus() {
@@ -51,7 +51,7 @@ export default function AdminSync() {
         .from('recaps')
         .select('user_id, exported_at, data->>userName')
         .eq('challenge_id', challenge.id)
-        .eq('week_number', currentWeek);
+        .eq('week_number', checkinWeek);
       if (error || !data) return;
       setParticipantStatus(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,11 +71,11 @@ export default function AdminSync() {
   useEffect(() => {
     fetchStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeek]);
+  }, [checkinWeek]);
 
   async function buildAdminRecap(): Promise<RecapFile> {
     const adminPhotos: WeeklyPhoto[] = [];
-    for (let w = 0; w <= currentWeek; w++) {
+    for (let w = 0; w <= checkinWeek; w++) {
       const p = await getPhotosByWeek(profile.id, w);
       if (p) adminPhotos.push(p);
     }
@@ -84,11 +84,11 @@ export default function AdminSync() {
     return generateRecapFile(
       profile,
       challenge.id,
-      currentWeek,
+      checkinWeek,
       dailyLogs.filter((l) => l.userId === profile.id && l.date >= challenge.startDate && l.date <= challengeEnd),
-      bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= currentWeek),
+      bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber <= checkinWeek),
       adminPhotos,
-      weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= currentWeek),
+      weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= checkinWeek),
     );
   }
 
@@ -125,7 +125,7 @@ export default function AdminSync() {
 
       // Nombre de jours réellement écoulés dans la semaine courante (1 à 7)
       // Utilisé pour la régularité live (avant le check-in hebdo)
-      const { start: cwWeekStart } = weekRange(currentWeek);
+      const { start: cwWeekStart } = weekRange(checkinWeek);
       const cwWeekStartDate = new Date(cwWeekStart + 'T12:00:00');
       const nowRaw = new Date();
       const nowMidnight = new Date(nowRaw.getFullYear(), nowRaw.getMonth(), nowRaw.getDate());
@@ -143,7 +143,7 @@ export default function AdminSync() {
 
         // Cumulative streak bonuses for all weeks that have logs (cross-week streaks)
         const allWeeksWithLogs: number[] = [];
-        for (let w = 1; w <= currentWeek; w++) {
+        for (let w = 1; w <= checkinWeek; w++) {
           const { start, end } = weekRange(w);
           if (rLogs.some((l) => l.date >= start && l.date < end)) {
             allWeeksWithLogs.push(w);
@@ -161,26 +161,26 @@ export default function AdminSync() {
         const totalEgo = liveDailyEgo + totalStreakBonuses + aiOnlyBonuses;
 
         // Composite score for ranking: use current week's check-in if available, else synthesize from daily logs
-        const currentWeekScore = rScores.find((s) => s.weekNumber === currentWeek);
-        const { start: cwStart, end: cwEnd } = weekRange(currentWeek);
+        const checkinWeekScore = rScores.find((s) => s.weekNumber === checkinWeek);
+        const { start: cwStart, end: cwEnd } = weekRange(checkinWeek);
         const cwLogs = rLogs.filter((l) => l.date >= cwStart && l.date < cwEnd);
         const maxEgo = calcMaxEgoPoints(cwLogs, rProfile.intensity, customRituals);
         let composite: number;
         let weekRegularity: number;
         let weekTransformation: number;
 
-        if (currentWeekScore) {
-          const storedAI = aiResults.find((r) => r.userId === rProfile.id && r.weekNumber === currentWeek);
-          const liveAiBonus = storedAI ? calcAIBonus(storedAI.credibilityScore, rProfile.intensity) : currentWeekScore.aiBonus;
+        if (checkinWeekScore) {
+          const storedAI = aiResults.find((r) => r.userId === rProfile.id && r.weekNumber === checkinWeek);
+          const liveAiBonus = storedAI ? calcAIBonus(storedAI.credibilityScore, rProfile.intensity) : checkinWeekScore.aiBonus;
           composite = calcCompositeScore(
-            currentWeekScore.egoPoints + currentWeekScore.streakBonus + liveAiBonus,
-            currentWeekScore.transformationScore,
-            currentWeekScore.regularityScore,
+            checkinWeekScore.egoPoints + checkinWeekScore.streakBonus + liveAiBonus,
+            checkinWeekScore.transformationScore,
+            checkinWeekScore.regularityScore,
             maxEgo,
             rProfile.intensity
           );
-          weekRegularity = currentWeekScore.regularityScore;
-          weekTransformation = currentWeekScore.transformationScore;
+          weekRegularity = checkinWeekScore.regularityScore;
+          weekTransformation = checkinWeekScore.transformationScore;
         } else {
           const cwEgo = cwLogs.reduce(
             (sum, l) => sum + calcDayRitualPoints(l, rProfile.intensity, customRituals),
@@ -218,7 +218,7 @@ export default function AdminSync() {
       const lb: MasterLeaderboard = {
         challengeId: challenge.id,
         updatedAt: new Date().toISOString(),
-        weekNumber: currentWeek,
+        weekNumber: checkinWeek,
         entries,
         weeklyHighlights: {
           biggestMover: biggestMover?.userId ?? '',
@@ -256,7 +256,7 @@ export default function AdminSync() {
       const collectedAiResults: AIAnalysisResult[] = [];
 
       for (const recap of processedRecaps) {
-        const photos = await getPhotosByWeek(recap.profile.id, currentWeek);
+        const photos = await getPhotosByWeek(recap.profile.id, checkinWeek);
         if (!photos) continue;
 
         const rComps = [...recap.bodyCompositions].sort((a, b) => a.weekNumber - b.weekNumber);
@@ -264,14 +264,14 @@ export default function AdminSync() {
         if (!latestComp) continue;
 
         const prevComp = rComps.length > 1 ? rComps[rComps.length - 2] : null;
-        const prevPhotos = await getPhotosByWeek(recap.profile.id, currentWeek - 1) ?? undefined;
+        const prevPhotos = await getPhotosByWeek(recap.profile.id, checkinWeek - 1) ?? undefined;
 
         // Logs de la semaine courante pour ce participant
         const [csy, csm, csd] = challenge.startDate.split('-').map(Number);
         const cwStart = new Date(csy, csm - 1, csd);
-        cwStart.setDate(cwStart.getDate() + (currentWeek - 1) * 7);
+        cwStart.setDate(cwStart.getDate() + (checkinWeek - 1) * 7);
         const cwEnd = new Date(csy, csm - 1, csd);
-        cwEnd.setDate(cwEnd.getDate() + currentWeek * 7);
+        cwEnd.setDate(cwEnd.getDate() + checkinWeek * 7);
         const cwStartStr = cwStart.toISOString().slice(0, 10);
         const cwEndStr = cwEnd.toISOString().slice(0, 10);
         const participantWeekLogs = recap.dailyLogs.filter(
@@ -288,7 +288,7 @@ export default function AdminSync() {
         try {
           const result = await runAIAnalysis({
             userId: recap.profile.id,
-            weekNumber: currentWeek,
+            weekNumber: checkinWeek,
             prevCompo: prevComp,
             currCompo: latestComp,
             photo: photos,
@@ -353,7 +353,7 @@ export default function AdminSync() {
         .from('recaps')
         .select('data')
         .eq('challenge_id', challenge.id)
-        .eq('week_number', currentWeek);
+        .eq('week_number', checkinWeek);
       if (error) { showToast('Erreur Supabase', 'error'); return; }
       const parsed: RecapFile[] = (data ?? []).map((row: { data: RecapFile }) => row.data);
       setRecaps(parsed);
@@ -386,8 +386,16 @@ export default function AdminSync() {
   const totalCount = othersCount + 1;
   const canRunAI = !!challenge.anthropicApiKey && processedRecaps.length > 0 && !!masterLeaderboard;
   const participantsWithPhotos = processedRecaps.filter(
-    (r) => r.weeklyPhotos?.some((p) => p.weekNumber === currentWeek)
+    (r) => r.weeklyPhotos?.some((p) => p.weekNumber === checkinWeek)
   ).length;
+
+  if (checkinWeek === 0) {
+    return (
+      <div className="panel2 p-6 text-center text-sm text-[var(--muted)]">
+        Le premier check-in hebdomadaire sera disponible à J7 du challenge.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -396,7 +404,7 @@ export default function AdminSync() {
       <div className="panel2 p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
-            Étape 1 — Récaps S{currentWeek}
+            Étape 1 — Récaps S{checkinWeek}
           </div>
           {sb && (
             <button
