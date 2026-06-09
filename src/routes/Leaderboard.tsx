@@ -89,7 +89,7 @@ export default function Leaderboard() {
 
         if (error) {
           console.error('Supabase recap push failed:', error);
-          showToast('Récap exporté (⚠ sync Supabase échoué — partage le fichier manuellement)', 'error');
+          showToast(`Supabase: ${error.code ?? ''} ${error.message ?? JSON.stringify(error)}`, 'error');
         } else {
           showToast('Récap envoyé à l\'admin !', 'success');
         }
