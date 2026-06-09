@@ -72,12 +72,9 @@ export default function Leaderboard() {
         allPhotos,
         weeklyScores.filter((s) => s.userId === profile.id && s.weekNumber <= checkinWeek),
       );
-      exportRecapAsFile(recap);
-
+      // Supabase en premier — iOS Safari avorte les fetch lancés après un a.click() blob
       const sb = supabase();
       if (sb) {
-        // Photos exclues du payload Postgres : elles sont dans Supabase Storage.
-        // Ça évite de saturer le free tier Supabase avec des lignes JSONB > 1 Mo.
         const { weeklyPhotos: _photos, ...recapWithoutPhotos } = recap;
         const { error } = await sb.from('recaps').upsert({
           challenge_id: challenge.id,
@@ -96,6 +93,9 @@ export default function Leaderboard() {
       } else {
         showToast('Récap exporté — envoie le fichier à l\'admin', 'success');
       }
+
+      // Téléchargement du fichier après la requête réseau
+      exportRecapAsFile(recap);
     } catch (err) {
       showToast('Erreur lors de l\'export', 'error');
       console.error(err);
