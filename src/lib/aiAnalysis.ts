@@ -107,6 +107,33 @@ function fmt(n: number, decimals = 1): string {
   return (n >= 0 ? '+' : '') + n.toFixed(decimals);
 }
 
+// Le modèle imbrique parfois un second objet JSON complet dans le champ "analysis" —
+// on déballe récursivement pour récupérer le résultat réellement destiné à l'utilisateur.
+function unwrapNestedAnalysis(parsed: { credibilityScore: number; analysis: string; motivation?: string }): { credibilityScore: number; analysis: string; motivation?: string } {
+  if (typeof parsed.analysis !== 'string') return parsed;
+  const trimmed = parsed.analysis.trim();
+  if (!trimmed.startsWith('{') || !trimmed.includes('"credibilityScore"')) return parsed;
+
+  let inner: { credibilityScore: number; analysis: string; motivation?: string } | null = null;
+  try {
+    inner = JSON.parse(trimmed);
+  } catch {
+    const match = trimmed.match(/\{[\s\S]*"credibilityScore"[\s\S]*\}/);
+    if (match) {
+      try {
+        inner = JSON.parse(match[0]);
+      } catch {
+        inner = null;
+      }
+    }
+  }
+
+  if (inner && typeof inner.credibilityScore === 'number' && typeof inner.analysis === 'string') {
+    return unwrapNestedAnalysis(inner);
+  }
+  return parsed;
+}
+
 function buildEgoVoiceBlock(sex: 'M' | 'F' | undefined): string {
   if (sex === 'M') {
     return `
@@ -483,7 +510,7 @@ export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysi
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: 700,
       temperature: 0,
       messages: [{
         role: 'user',
@@ -512,6 +539,8 @@ export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysi
       parsed = { credibilityScore: 50, analysis: cleaned };
     }
   }
+
+  parsed = unwrapNestedAnalysis(parsed);
 
   return {
     userId,
