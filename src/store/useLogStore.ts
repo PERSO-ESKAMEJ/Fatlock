@@ -19,6 +19,7 @@ interface LogStore {
   getAIResult: (userId: string, week: number) => AIAnalysisResult | undefined;
   removeUserData: (userId: string) => void;
   removeWeekData: (userId: string, weekNumber: number) => void;
+  renumberWeek: (userId: string, fromWeek: number, toWeek: number) => void;
   reset: () => void;
 }
 
@@ -130,6 +131,40 @@ export const useLogStore = create<LogStore>()(
           weeklyScores: s.weeklyScores.filter((ws) => ws.userId !== userId),
           aiResults: s.aiResults.filter((r) => r.userId !== userId),
         })),
+
+      renumberWeek: (userId, fromWeek, toWeek) => {
+        set((s) => ({
+          bodyCompositions: s.bodyCompositions.map((c) =>
+            c.userId === userId && c.weekNumber === fromWeek ? { ...c, weekNumber: toWeek } : c
+          ),
+          weeklyScores: s.weeklyScores.map((ws) =>
+            ws.userId === userId && ws.weekNumber === fromWeek ? { ...ws, weekNumber: toWeek } : ws
+          ),
+          aiResults: s.aiResults.map((r) =>
+            r.userId === userId && r.weekNumber === fromWeek ? { ...r, weekNumber: toWeek } : r
+          ),
+        }));
+        // Sync Supabase — fire-and-forget
+        const sb = supabase();
+        const challenge = useProfileStore.getState().challenge;
+        if (sb && challenge) {
+          (async () => {
+            try {
+              const comp = get().bodyCompositions.find((c) => c.userId === userId && c.weekNumber === toWeek);
+              if (comp) {
+                await sb.from('body_compositions').upsert(
+                  { challenge_id: challenge.id, user_id: userId, week_number: toWeek, data: comp, updated_at: new Date().toISOString() },
+                  { onConflict: 'challenge_id,user_id,week_number' }
+                );
+              }
+              await sb.from('body_compositions').delete()
+                .eq('challenge_id', challenge.id).eq('user_id', userId).eq('week_number', fromWeek);
+              await sb.from('recaps').delete()
+                .eq('challenge_id', challenge.id).eq('user_id', userId).eq('week_number', fromWeek);
+            } catch { /* silencieux */ }
+          })();
+        }
+      },
 
       removeWeekData: (userId, weekNumber) => {
         set((s) => ({

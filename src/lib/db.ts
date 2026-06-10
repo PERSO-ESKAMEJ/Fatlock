@@ -118,6 +118,23 @@ export async function deleteWeeklyPhoto(userId: string, weekNumber: number): Pro
   await sb.storage.from('fatlock-photos').remove([storagePath(challengeId, userId, weekNumber)]);
 }
 
+export async function moveWeeklyPhoto(userId: string, fromWeek: number, toWeek: number): Promise<void> {
+  const db = await getDB();
+  const record = await db.get('weeklyPhotos', photoKey(userId, fromWeek));
+  if (!record) return;
+
+  const moved: StoredPhoto = { ...record, weekNumber: toWeek, key: photoKey(userId, toWeek) };
+  await db.put('weeklyPhotos', moved);
+  await db.delete('weeklyPhotos', photoKey(userId, fromWeek));
+
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  if (!sb || !challengeId) return;
+
+  await uploadPhotoToSupabase(stripKey(moved)).catch(() => undefined);
+  await sb.storage.from('fatlock-photos').remove([storagePath(challengeId, userId, fromWeek)]).catch(() => undefined);
+}
+
 export async function clearUserPhotos(userId: string): Promise<void> {
   const db = await getDB();
   const all = await db.getAllFromIndex('weeklyPhotos', 'byUser', userId);

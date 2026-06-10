@@ -12,7 +12,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { getDailyCode, getTodayStr } from '../lib/dailyCode';
-import { clearAllPhotos, clearUserPhotos, deleteWeeklyPhoto } from '../lib/db';
+import { clearAllPhotos, clearUserPhotos, deleteWeeklyPhoto, moveWeeklyPhoto } from '../lib/db';
 import { supabase } from '../lib/supabase';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -28,7 +28,7 @@ const DAY_TYPES: { value: DayType | ''; label: string }[] = [
 
 export default function Settings() {
   const { profile, challenge, entries, activeId, switchEntry, updateProfile, updateChallenge, reset: resetProfile, resetAll } = useProfileStore();
-  const { removeUserData, removeWeekData, bodyCompositions, reset: resetLogs } = useLogStore();
+  const { removeUserData, removeWeekData, renumberWeek, bodyCompositions, reset: resetLogs } = useLogStore();
   const { reset: resetChallenge } = useChallengeStore();
   const { reset: resetLeaderboard } = useLeaderboardStore();
   const { showToast } = useToast();
@@ -56,6 +56,8 @@ export default function Settings() {
   });
   const [weekToDelete, setWeekToDelete] = useState('');
   const [showDeleteWeek, setShowDeleteWeek] = useState(false);
+  const [renumberTarget, setRenumberTarget] = useState('');
+  const [showRenumberWeek, setShowRenumberWeek] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showResetAll, setShowResetAll] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -278,6 +280,25 @@ export default function Settings() {
     resetLeaderboard();
     clearAllPhotos().catch(() => undefined);
     navigate('/');
+  }
+
+  async function handleRenumberWeek() {
+    const from = parseInt(weekToDelete);
+    const to = parseInt(renumberTarget);
+    if (isNaN(from) || isNaN(to) || to < 0 || to > durationWeeks) {
+      showToast('Numéro de semaine invalide', 'error');
+      return;
+    }
+    if (bodyCompositions.some((c) => c.userId === profile!.id && c.weekNumber === to)) {
+      showToast(`Un check-in S${to} existe déjà — supprime-le d'abord`, 'error');
+      return;
+    }
+    renumberWeek(profile!.id, from, to);
+    await moveWeeklyPhoto(profile!.id, from, to).catch(() => undefined);
+    setShowRenumberWeek(false);
+    setWeekToDelete('');
+    setRenumberTarget('');
+    showToast(`Check-in S${from} renommé en S${to}`, 'success');
   }
 
   async function handleDeleteWeek() {
@@ -703,14 +724,14 @@ export default function Settings() {
       <div className="panel p-4 mb-4">
         <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-1">Corriger un check-in</div>
         <p className="text-xs text-[var(--muted2)] mb-3">
-          Tu t'es trompé de semaine ? Supprime le check-in concerné (mesures, photos, score) pour pouvoir le refaire correctement.
+          Tu t'es trompé de semaine ? Renomme le check-in vers le bon numéro (garde tes données), ou supprime-le pour le refaire entièrement.
         </p>
         {bodyCompositions.filter((c) => c.userId === profile.id && c.weekNumber > 0).length === 0 ? (
           <p className="text-xs text-[var(--muted2)]">Aucun check-in hebdomadaire enregistré pour l'instant.</p>
         ) : (
-          <div className="flex gap-2">
-            <select value={weekToDelete} onChange={(e) => setWeekToDelete(e.target.value)} className="flex-1">
-              <option value="">Semaine à supprimer…</option>
+          <div className="space-y-2">
+            <select value={weekToDelete} onChange={(e) => { setWeekToDelete(e.target.value); setRenumberTarget(''); }} className="w-full">
+              <option value="">Semaine concernée…</option>
               {bodyCompositions
                 .filter((c) => c.userId === profile.id && c.weekNumber > 0)
                 .sort((a, b) => a.weekNumber - b.weekNumber)
@@ -718,9 +739,24 @@ export default function Settings() {
                   <option key={c.weekNumber} value={c.weekNumber}>S{c.weekNumber}</option>
                 ))}
             </select>
-            <Button variant="danger" disabled={!weekToDelete} onClick={() => setShowDeleteWeek(true)}>
-              Supprimer
-            </Button>
+            {weekToDelete && (
+              <div className="flex gap-2">
+                <select value={renumberTarget} onChange={(e) => setRenumberTarget(e.target.value)} className="flex-1">
+                  <option value="">Renommer en…</option>
+                  {Array.from({ length: durationWeeks + 1 }, (_, w) => w)
+                    .filter((w) => w !== Number(weekToDelete) && !bodyCompositions.some((c) => c.userId === profile.id && c.weekNumber === w))
+                    .map((w) => (
+                      <option key={w} value={w}>S{w}</option>
+                    ))}
+                </select>
+                <Button variant="ghost" disabled={!renumberTarget} onClick={() => setShowRenumberWeek(true)}>
+                  Renommer
+                </Button>
+                <Button variant="danger" onClick={() => setShowDeleteWeek(true)}>
+                  Supprimer
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -750,6 +786,16 @@ export default function Settings() {
           Tout supprimer — tous les groupes
         </Button>
       </div>
+
+      <Modal open={showRenumberWeek} onClose={() => setShowRenumberWeek(false)} title={`Renommer S${weekToDelete} en S${renumberTarget} ?`}>
+        <p className="text-sm text-[var(--muted)] mb-4">
+          Les mesures, photos, score hebdomadaire et analyse IA de la <span className="font-bold text-[var(--ink)]">Semaine {weekToDelete}</span> seront déplacés vers <span className="font-bold text-[var(--ink)]">Semaine {renumberTarget}</span>. Aucune donnée n'est perdue.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="ghost" className="flex-1" onClick={() => setShowRenumberWeek(false)}>Annuler</Button>
+          <Button className="flex-1" onClick={handleRenumberWeek}>Renommer</Button>
+        </div>
+      </Modal>
 
       <Modal open={showDeleteWeek} onClose={() => setShowDeleteWeek(false)} title={`Supprimer le check-in S${weekToDelete} ?`}>
         <p className="text-sm text-[var(--muted)] mb-4">
