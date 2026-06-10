@@ -18,6 +18,7 @@ interface LogStore {
   addAIResult: (result: AIAnalysisResult) => void;
   getAIResult: (userId: string, week: number) => AIAnalysisResult | undefined;
   removeUserData: (userId: string) => void;
+  removeWeekData: (userId: string, weekNumber: number) => void;
   reset: () => void;
 }
 
@@ -129,6 +130,27 @@ export const useLogStore = create<LogStore>()(
           weeklyScores: s.weeklyScores.filter((ws) => ws.userId !== userId),
           aiResults: s.aiResults.filter((r) => r.userId !== userId),
         })),
+
+      removeWeekData: (userId, weekNumber) => {
+        set((s) => ({
+          bodyCompositions: s.bodyCompositions.filter((c) => !(c.userId === userId && c.weekNumber === weekNumber)),
+          weeklyScores: s.weeklyScores.filter((ws) => !(ws.userId === userId && ws.weekNumber === weekNumber)),
+          aiResults: s.aiResults.filter((r) => !(r.userId === userId && r.weekNumber === weekNumber)),
+        }));
+        // Nettoyage Supabase — fire-and-forget
+        const sb = supabase();
+        const challenge = useProfileStore.getState().challenge;
+        if (sb && challenge) {
+          (async () => {
+            try {
+              await sb.from('body_compositions').delete()
+                .eq('challenge_id', challenge.id).eq('user_id', userId).eq('week_number', weekNumber);
+              await sb.from('recaps').delete()
+                .eq('challenge_id', challenge.id).eq('user_id', userId).eq('week_number', weekNumber);
+            } catch { /* silencieux */ }
+          })();
+        }
+      },
 
       reset: () =>
         set({ dailyLogs: [], bodyCompositions: [], weeklyScores: [], aiResults: [] }),

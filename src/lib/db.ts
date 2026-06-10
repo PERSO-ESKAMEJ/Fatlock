@@ -107,6 +107,17 @@ export async function getWeeklyPhoto(
   return remote;
 }
 
+export async function deleteWeeklyPhoto(userId: string, weekNumber: number): Promise<void> {
+  const db = await getDB();
+  await db.delete('weeklyPhotos', photoKey(userId, weekNumber));
+
+  const sb = supabase();
+  const challengeId = useProfileStore.getState().challenge?.id;
+  if (!sb || !challengeId) return;
+
+  await sb.storage.from('fatlock-photos').remove([storagePath(challengeId, userId, weekNumber)]);
+}
+
 export async function clearUserPhotos(userId: string): Promise<void> {
   const db = await getDB();
   const all = await db.getAllFromIndex('weeklyPhotos', 'byUser', userId);
