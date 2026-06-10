@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useProfileStore } from './store/useProfileStore';
-import { setupSupabase, clearSupabase } from './lib/supabase';
+import { useLogStore } from './store/useLogStore';
+import { useLeaderboardStore } from './store/useLeaderboardStore';
+import { getChallengeState } from './store/useChallengeStore';
+import { setupSupabase, clearSupabase, supabase } from './lib/supabase';
+import { MasterLeaderboard } from './types';
 import Welcome from './routes/Welcome';
 import Dashboard from './routes/Dashboard';
 import Rituals from './routes/Rituals';
@@ -41,6 +45,32 @@ export default function App() {
     // Évite l'éviction automatique du stockage sur iOS Safari (~7 jours d'inactivité)
     navigator.storage?.persist?.();
   }, []);
+
+  // Récupération automatique du classement (et de l'analyse IA) au lancement de l'app
+  useEffect(() => {
+    if (!profile || !challenge || profile.isAdmin) return;
+    const sb = supabase();
+    if (!sb) return;
+    const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
+    if (getChallengeState(challenge.startDate, durationWeeks) === 'pending') return;
+
+    (async () => {
+      try {
+        const { data, error } = await sb
+          .from('master_leaderboards')
+          .select('data')
+          .eq('challenge_id', challenge.id)
+          .single();
+        if (error || !data) return;
+        const lb = data.data as MasterLeaderboard;
+        useLeaderboardStore.getState().setMasterLeaderboard(lb);
+        const myAI = lb.aiAnalyses?.find((r) => r.userId === profile.id);
+        if (myAI) useLogStore.getState().addAIResult(myAI);
+      } catch {
+        // silencieux — sync manuelle disponible dans l'onglet Classement
+      }
+    })();
+  }, [profile?.id, challenge?.id, challenge?.supabaseUrl, profile?.isAdmin]);
 
   return (
     <ToastProvider>
