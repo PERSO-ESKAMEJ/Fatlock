@@ -364,6 +364,17 @@ export default function AdminSync() {
     }
   }
 
+  function handleExportMaster() {
+    if (!masterLeaderboard) return;
+    const blob = new Blob([JSON.stringify(masterLeaderboard, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `master-${challenge.id}-S${masterLeaderboard.weekNumber}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     const parsed: RecapFile[] = [];
@@ -526,6 +537,13 @@ export default function AdminSync() {
           </div>
         )}
       </div>
+
+      {/* ── Partage manuel du classement ── */}
+      {masterLeaderboard && (
+        <Button variant="ghost" className="w-full" onClick={handleExportMaster}>
+          ⬇ Exporter le classement (.json) — pour participants sans Supabase
+        </Button>
+      )}
 
       {/* ── Révéler ── */}
       {masterLeaderboard && (
