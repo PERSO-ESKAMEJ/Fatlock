@@ -198,10 +198,10 @@ La transition d'une alimentation riche en glucides simples/aliments transformés
 - Réduction du bol alimentaire (aliments plus denses, moins de volume intestinal)
 - Résultat : perte de poids apparente de 2 à 6 kg en S1, dont la quasi-totalité est de l'eau — PAS de la graisse réelle.
 De plus, les mesures S0 ont pu être prises sans jeûne (après un repas normal, en soirée) alors que S1 est pris le matin à jeun. Cet écart de conditions peut créer un gap supplémentaire de 1 à 3 kg qui ne reflète aucune perte réelle.
-CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéficier de la tolérance maximale. Ne pénalise JAMAIS une forte perte en S1.
-- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse.
-- La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
-- Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg sur une photo. L'absence de changement visible est normale.
+CONCLUSION : cette tolérance maximale s'applique STRICTEMENT à la rubrique 1 (plausibilité de la perte de masse grasse) — une perte élevée en S1, même spectaculaire, ne doit JAMAIS faire baisser la rubrique 1.
+ATTENTION : cette tolérance ne s'étend PAS aux rubriques 2 et 3. Pour la rubrique 2 (cohérence interne), calcule et compare réellement ${dPoids} à la somme des variations (graisse + muscle + eau estimée) : un écart important reste un écart, même en S1, et doit faire baisser la note en conséquence. Pour la rubrique 3 (stabilité musculaire), une variation de ${dMM} supérieure à 0,5 kg reste anormale même en S1.
+- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse — utilise cette marge pour juger la rubrique 2, pas pour l'ignorer totalement.
+- Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg sur une photo. L'absence de changement visible est normale (rubrique 4).
 
 GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulement des valeurs rondes), puis additionne (total /100). Deux participants avec des données légèrement différentes doivent obtenir des notes légèrement différentes.
 
@@ -264,10 +264,9 @@ La transition d'une alimentation riche en glucides simples/aliments transformés
 - Réduction du bol alimentaire (aliments plus denses, moins de volume intestinal)
 - Résultat : perte de poids apparente de 2 à 6 kg en S1, dont la quasi-totalité est de l'eau — PAS de la graisse réelle.
 De plus, la photo et mesure S0 ont pu être prises sans jeûne (après un repas normal, en soirée) alors que S1 est pris le matin à jeun. Cet écart de conditions peut créer un gap supplémentaire de 1 à 3 kg qui ne reflète aucune perte réelle. La photo S0 peut aussi montrer une silhouette plus gonflée qu'en réalité pour cette raison.
-CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéficier de la tolérance maximale. Ne pénalise JAMAIS une forte perte en S1.
-- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse.
-- La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
-- Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg entre deux photos. Ne rien voir de différent est NORMAL, jamais suspect.
+CONCLUSION : cette tolérance maximale s'applique STRICTEMENT à la rubrique 1 (plausibilité de la perte de masse grasse) — une perte élevée en S1, même spectaculaire, ne doit JAMAIS faire baisser la rubrique 1.
+ATTENTION : cette tolérance ne s'étend PAS aux rubriques 2, 3 et 5. Pour la rubrique 2 (cohérence interne), calcule et compare réellement ${dPoids} à la somme des variations (graisse + muscle + eau estimée) : un écart important reste un écart, même en S1, et doit faire baisser la note en conséquence. Pour la rubrique 3 (stabilité musculaire), une variation de ${dMM} supérieure à 0,5 kg reste anormale même en S1. Pour la rubrique 5 (authenticité), "ne rien voir de différent est normal" s'applique à l'ABSENCE de changement visible lié à la perte de poids — pas à une photo manifestement réutilisée (même pose exacte, même éclairage, même arrière-plan au pixel près) ni à une silhouette qui contredit franchement la direction déclarée : ces signaux restent pleinement pénalisables.
+- Les balances à impédance ont ±1 à 2 kg d'erreur sur la masse grasse et confondent systématiquement perte d'eau et graisse — utilise cette marge pour juger la rubrique 2, pas pour l'ignorer totalement.
 
 GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulement des valeurs rondes), puis additionne (total /100). Deux participants avec des données légèrement différentes doivent obtenir des notes légèrement différentes.
 
