@@ -203,29 +203,29 @@ CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéfici
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg sur une photo. L'absence de changement visible est normale.
 
-GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (total /100)
+GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulement des valeurs rondes), puis additionne (total /100). Deux participants avec des données légèrement différentes doivent obtenir des notes légèrement différentes.
 
 1. Plausibilité de la perte de masse grasse — /30
-   30 : ${dMG} cohérent, ou perte élevée explicable par l'eau/glycogène en S1
-   15 : perte annoncée extrême mais pas strictement impossible
-   0  : perte de graisse réellement impossible (> ~4 kg réels en 1 semaine)
+   25-30 : ${dMG} cohérent, ou perte élevée explicable par l'eau/glycogène en S1 (30 = parfaitement cohérent, 25 = léger excès)
+   10-24 : perte annoncée extrême mais pas strictement impossible — plus l'excès est important, plus la note est basse
+   0-9   : perte de graisse réellement impossible (> ~4 kg réels en 1 semaine) — note selon la sévérité
 
 2. Cohérence interne des métriques — /30
-   30 : ${dPoids} ≈ somme des variations (graisse + muscle + eau), à la marge de mesure près
-   15 : écart inexpliqué modéré
-   0  : contradiction nette (ex : poids stable mais −3 kg de graisse sans gain musculaire ni perte d'eau)
+   25-30 : ${dPoids} ≈ somme des variations (graisse + muscle + eau), à la marge de mesure près (30 = parfaite, 25 = écart minime)
+   10-24 : écart inexpliqué modéré — plus l'écart est grand, plus la note est basse
+   0-9   : contradiction nette (ex : poids stable mais −3 kg de graisse sans gain musculaire ni perte d'eau)
 
 3. Stabilité de la masse musculaire — /20
-   20 : |${dMM}| ≤ 0,5 kg
-   10 : entre 0,5 et 1,5 kg
-   0  : variation > 1,5 kg en une semaine (impossible)
+   17-20 : |${dMM}| ≤ 0,5 kg (20 = variation nulle, 17 = proche de 0,5)
+   8-16  : entre 0,5 et 1,5 kg — plus proche de 1,5, plus la note est basse
+   0-7   : variation > 1,5 kg en une semaine (impossible)
 
 4. Cohérence photo / % de masse grasse déclaré — /20
-   20 : la silhouette est compatible avec ${mgPct} %
-   10 : léger décalage
-   0  : contradiction flagrante (ex : 10 % déclaré mais aucune définition visible, ou silhouette nettement plus grasse)
+   17-20 : la silhouette est compatible avec ${mgPct} %
+   8-16  : léger décalage
+   0-7   : contradiction flagrante (ex : 10 % déclaré mais aucune définition visible, ou silhouette nettement plus grasse)
 
-SCORE FINAL = somme des 4 rubriques.
+SCORE FINAL = somme des 4 rubriques (nombre entier, pas nécessairement rond).
 ${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 {"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
@@ -264,34 +264,34 @@ CONCLUSION : en S1, toute perte déclarée, même spectaculaire, doit bénéfici
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg entre deux photos. Ne rien voir de différent est NORMAL, jamais suspect.
 
-GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne (total /100)
+GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulement des valeurs rondes), puis additionne (total /100). Deux participants avec des données légèrement différentes doivent obtenir des notes légèrement différentes.
 
 1. Plausibilité de la perte de masse grasse — /25
-   25 : cohérent ou perte élevée explicable par l'eau/glycogène en S1
-   12 : extrême mais pas strictement impossible
-   0  : > ~4 kg de graisse réelle en 1 semaine (impossible)
+   21-25 : cohérent ou perte élevée explicable par l'eau/glycogène en S1 (25 = parfaitement cohérent)
+   8-20  : extrême mais pas strictement impossible — plus l'excès est important, plus la note est basse
+   0-7   : > ~4 kg de graisse réelle en 1 semaine (impossible)
 
 2. Cohérence interne des métriques — /25
-   25 : ${dPoids} ≈ somme des variations (graisse + muscle + eau)
-   12 : écart inexpliqué modéré
-   0  : contradiction nette (poids stable mais grosse perte de graisse sans gain musculaire ni perte d'eau)
+   21-25 : ${dPoids} ≈ somme des variations (graisse + muscle + eau)
+   8-20  : écart inexpliqué modéré — note selon l'ampleur de l'écart
+   0-7   : contradiction nette (poids stable mais grosse perte de graisse sans gain musculaire ni perte d'eau)
 
 3. Stabilité de la masse musculaire — /15
-   15 : |${dMM}| ≤ 0,5 kg
-   7  : entre 0,5 et 1,5 kg
-   0  : > 1,5 kg en une semaine
+   13-15 : |${dMM}| ≤ 0,5 kg
+   5-12  : entre 0,5 et 1,5 kg — plus proche de 1,5, plus la note est basse
+   0-4   : > 1,5 kg en une semaine
 
 4. Cohérence photo S1 / % de masse grasse déclaré — /15
-   15 : silhouette compatible avec ${mgPct} %
-   7  : léger décalage
-   0  : contradiction flagrante
+   13-15 : silhouette compatible avec ${mgPct} %
+   5-12  : léger décalage
+   0-4   : contradiction flagrante
 
 5. Authenticité et cohérence visuelle S0 → S1 — /20
-   20 : les deux photos sont distinctes (pose, angle, tenue ou lumière différents) et ne contredisent pas les données ; l'absence de différence visible compte comme normale et vaut le plein
-   10 : doute léger sur la réutilisation
-   0  : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU la silhouette contredit franchement la direction déclarée
+   17-20 : les deux photos sont distinctes (pose, angle, tenue ou lumière différents) et ne contredisent pas les données ; l'absence de différence visible compte comme normale et vaut le plein
+   8-16  : doute léger sur la réutilisation
+   0-7   : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU la silhouette contredit franchement la direction déclarée
 
-SCORE FINAL = somme des 5 rubriques.
+SCORE FINAL = somme des 5 rubriques (nombre entier, pas nécessairement rond).
 ${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 {"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
@@ -325,36 +325,36 @@ ${weekNumber === 2
 - La masse musculaire ne varie pas de plus de ±0,5 kg en une semaine.
 - Tu NE PEUX PAS voir une perte de graisse ≤ 2 kg entre deux photos. Ne rien voir de différent est NORMAL, jamais suspect.
 
-GRILLE DE SCORING — note chaque rubrique indépendamment, puis additionne
+GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulement des valeurs rondes), puis additionne. Deux participants avec des données légèrement différentes doivent obtenir des notes légèrement différentes.
 
 1. Plausibilité de la perte de masse grasse — /25
-   25 : perte de graisse ≤ ${maxPlausibleKg} kg (seuil rythme ${ic.label} + marge d'impédance)
-   12 : entre ${maxPlausibleKg} kg et ${impossibleKg} kg
-   0  : > ${impossibleKg} kg (impossible à ce rythme)
+   21-25 : perte de graisse ≤ ${maxPlausibleKg} kg (seuil rythme ${ic.label} + marge d'impédance) — 25 = nettement en dessous, 21 = juste à la limite
+   8-20  : entre ${maxPlausibleKg} kg et ${impossibleKg} kg — note décroissante selon la proximité de ${impossibleKg} kg
+   0-7   : > ${impossibleKg} kg (impossible à ce rythme)
 
 2. Cohérence interne des métriques — /25
-   25 : ${dPoids} ≈ somme des variations (graisse + muscle + eau)
-   12 : écart inexpliqué modéré
-   0  : contradiction nette (ex : poids stable mais grosse perte de graisse sans gain musculaire ni perte d'eau)
+   21-25 : ${dPoids} ≈ somme des variations (graisse + muscle + eau)
+   8-20  : écart inexpliqué modéré — note selon l'ampleur de l'écart
+   0-7   : contradiction nette (ex : poids stable mais grosse perte de graisse sans gain musculaire ni perte d'eau)
 
 3. Stabilité de la masse musculaire — /15
-   15 : |${dMM}| ≤ 0,5 kg
-   7  : entre 0,5 et 1,5 kg
-   0  : > 1,5 kg en une semaine
+   13-15 : |${dMM}| ≤ 0,5 kg
+   5-12  : entre 0,5 et 1,5 kg — plus proche de 1,5, plus la note est basse
+   0-4   : > 1,5 kg en une semaine
 
 4. Cohérence photo actuelle / % de masse grasse déclaré — /15
-   15 : silhouette compatible avec ${mgPct} %
-   7  : léger décalage
-   0  : contradiction flagrante
+   13-15 : silhouette compatible avec ${mgPct} %
+   5-12  : léger décalage
+   0-4   : contradiction flagrante
 
 5. Authenticité et cohérence visuelle — /20
 ${hasPrevPhoto
-  ? `   20 : photos distinctes (pose, angle, tenue ou lumière différents) et non contradictoires ; l'absence de différence visible compte comme normale et vaut le plein
-   10 : doute léger sur la réutilisation
-   0  : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU silhouette contredisant franchement la direction déclarée`
+  ? `   17-20 : photos distinctes (pose, angle, tenue ou lumière différents) et non contradictoires ; l'absence de différence visible compte comme normale et vaut le plein
+   8-16  : doute léger sur la réutilisation
+   0-7   : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU silhouette contredisant franchement la direction déclarée`
   : `   Tu n'as reçu qu'1 photo. N'applique PAS cette rubrique 5. Note uniquement les rubriques 1 à 4 (total /80) puis multiplie le score final par 1,25 pour le ramener sur 100.`}
 
-SCORE FINAL = somme des rubriques applicables (voir condition rubrique 5).
+SCORE FINAL = somme des rubriques applicables (voir condition rubrique 5), nombre entier pas nécessairement rond.
 ${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
 {"credibilityScore": <0-100>, "analysis": "<3 à 4 phrases factuelles : données observées, diagnostic CAS 1/2/mixte, recommandation concrète>", "motivation": "<1 à 2 phrases style FATLOCK/Blue Lock selon le sexe du participant et le diagnostic>"}`;
