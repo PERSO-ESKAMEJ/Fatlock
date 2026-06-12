@@ -227,6 +227,7 @@ GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulem
 
 RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
 - Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de sa photo). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Calcule chaque rubrique avec une précision décimale interne (ex : 23,4/25 plutôt que 25/20/15/10/5/0), en te basant sur la valeur EXACTE de ${dPoids}, ${dMG}, ${dMM} et ${mgPct} (fournies à 0,1 près). N'arrondis qu'à la toute fin, sur la somme totale. Deux participants ayant des décimales différentes sur ces variables ne devraient presque jamais obtenir le même score final.
 - Les bornes basses (0-9, 0-7, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
 - Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
 
@@ -297,6 +298,7 @@ GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulem
 
 RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
 - Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de ses deux photos). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Calcule chaque rubrique avec une précision décimale interne (ex : 23,4/25 plutôt que 25/20/15/10/5/0), en te basant sur la valeur EXACTE de ${dPoids}, ${dMG}, ${dMM} et ${mgPct} (fournies à 0,1 près). N'arrondis qu'à la toute fin, sur la somme totale. Deux participants ayant des décimales différentes sur ces variables ne devraient presque jamais obtenir le même score final.
 - Les bornes basses (0-9, 0-7, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle, y compris pour la rubrique 5 (photo manifestement réutilisée) : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
 - Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
 
@@ -365,6 +367,7 @@ ${hasPrevPhoto
 
 RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
 - Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de ses photos). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Calcule chaque rubrique avec une précision décimale interne (ex : 23,4/25 plutôt que 25/20/15/10/5/0), en te basant sur la valeur EXACTE de ${dPoids}, ${dMG}, ${dMM} et ${mgPct} (fournies à 0,1 près). N'arrondis qu'à la toute fin, sur la somme totale. Deux participants ayant des décimales différentes sur ces variables ne devraient presque jamais obtenir le même score final.
 - Les bornes basses (0-7, 0-4, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle, y compris pour la rubrique 5 (photo manifestement réutilisée) : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
 - Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
 
