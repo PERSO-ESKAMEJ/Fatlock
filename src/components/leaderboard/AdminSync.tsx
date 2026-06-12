@@ -5,7 +5,7 @@ import { useLeaderboardStore } from '../../store/useLeaderboardStore';
 import { RecapFile, MasterLeaderboard, LeaderboardEntry, WeeklyPhoto, AIAnalysisResult } from '../../types';
 import { calcCurrentStreak, calcDayRitualPoints, calcRegularityScore, getTier, calcCompositeScore, calcTotalStreakBonuses, calcMaxEgoPoints, calcAIBonus } from '../../lib/scoring';
 import { getCheckinWeek, getChallengeEndDate } from '../../store/useChallengeStore';
-import { runAIAnalysis } from '../../lib/aiAnalysis';
+import { runAIAnalysis, runCredibilityCalibration, CalibrationInput } from '../../lib/aiAnalysis';
 import { calculateTargets } from '../../lib/nutrition';
 import { generateRecapFile, verifyRecapFile } from '../../lib/recap';
 import { getPhotosByWeek } from '../../lib/db';
@@ -254,6 +254,7 @@ export default function AdminSync() {
     try {
       const updatedEntries = masterLeaderboard.entries.map((e) => ({ ...e }));
       const collectedAiResults: AIAnalysisResult[] = [];
+      const calibrationInputs: CalibrationInput[] = [];
 
       for (const recap of processedRecaps) {
         const photos = await getPhotosByWeek(recap.profile.id, checkinWeek);
@@ -306,8 +307,42 @@ export default function AdminSync() {
           collectedAiResults.push(result);
           const entry = updatedEntries.find((e) => e.userId === recap.profile.id);
           if (entry) entry.weeklyCredibilityScore = result.credibilityScore;
+
+          const dPoids = prevComp ? latestComp.weightKg - prevComp.weightKg : null;
+          const dMG = prevComp ? latestComp.fatMassKg - prevComp.fatMassKg : null;
+          const dMM = prevComp ? latestComp.muscleMassKg - prevComp.muscleMassKg : null;
+          const mgPct = (latestComp.fatMassKg / latestComp.weightKg) * 100;
+          calibrationInputs.push({
+            userId: recap.profile.id,
+            name: recap.profile.name,
+            initialScore: result.credibilityScore,
+            dPoids,
+            dMG,
+            dMM,
+            mgPct,
+          });
         } catch (err) {
           console.warn('AI skipped for', recap.profile.name, err);
+        }
+      }
+
+      // ── Passage 2 : recalibration croisée des scores de crédibilité ──────
+      if (calibrationInputs.length >= 2) {
+        try {
+          setAiProgress('Recalibration croisée des scores...');
+          const calibrated = await runCredibilityCalibration(calibrationInputs, challenge.anthropicApiKey);
+          for (const [userId, score] of Object.entries(calibrated)) {
+            const entry = updatedEntries.find((e) => e.userId === userId);
+            if (entry) entry.weeklyCredibilityScore = score;
+
+            const aiResult = collectedAiResults.find((r) => r.userId === userId);
+            if (aiResult) {
+              aiResult.credibilityScore = score;
+              addAIResult(aiResult);
+            }
+          }
+        } catch (err) {
+          console.warn('Calibration croisée échouée, scores initiaux conservés', err);
         }
       }
 

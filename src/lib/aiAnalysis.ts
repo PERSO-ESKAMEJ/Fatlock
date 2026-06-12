@@ -568,3 +568,82 @@ export async function runAIAnalysis(params: AIAnalysisParams): Promise<AIAnalysi
     generatedAt: new Date().toISOString(),
   };
 }
+
+// ── Passage 2 : recalibration relative des scores de crédibilité ───────────
+// Les scores individuels (passage 1) sont calculés sans connaissance des autres
+// participants, ce qui produit des paliers récurrents (ex: plusieurs personnes à 78).
+// Ce second appel, uniquement textuel (pas de photos), recalibre les scores en les
+// comparant entre eux pour garantir une vraie hiérarchie différenciée.
+export interface CalibrationInput {
+  userId: string;
+  name: string;
+  initialScore: number;
+  dPoids: number | null;
+  dMG: number | null;
+  dMM: number | null;
+  mgPct: number;
+}
+
+export async function runCredibilityCalibration(
+  participants: CalibrationInput[],
+  apiKey: string
+): Promise<Record<string, number>> {
+  const fallback = Object.fromEntries(participants.map((p) => [p.userId, p.initialScore]));
+  if (participants.length < 2) return fallback;
+
+  const table = participants
+    .map((p) => `- ${p.name} (id:${p.userId}) : score initial ${p.initialScore}/100 | Δpoids ${p.dPoids != null ? fmt(p.dPoids) : 'N/A'} kg | Δgraisse ${p.dMG != null ? fmt(p.dMG) : 'N/A'} kg | Δmuscle ${p.dMM != null ? fmt(p.dMM) : 'N/A'} kg | masse grasse ${p.mgPct.toFixed(1)} %`)
+    .join('\n');
+
+  const prompt = `Tu es un juge d'intégrité pour un challenge de transformation physique. Voici les scores de crédibilité calculés INDÉPENDAMMENT pour chaque participant de la semaine, accompagnés de leurs données numériques déclarées :
+
+${table}
+
+Ces scores ont été calculés un par un, sans comparaison entre participants, ce qui crée des paliers artificiels (plusieurs personnes au même score alors que leurs données diffèrent).
+
+TA TÂCHE : recalibre ces scores en les comparant TOUS ENTRE EUX, pour produire une hiérarchie continue et différenciée.
+
+RÈGLES :
+- Deux participants dont les données (Δpoids, Δgraisse, Δmuscle, % masse grasse) diffèrent, même légèrement, doivent obtenir des scores finaux différents — sauf si leurs profils sont véritablement quasi identiques sur TOUS ces critères.
+- Respecte l'ordre et l'esprit des scores initiaux : un participant nettement moins crédible que les autres doit rester nettement plus bas, un participant très crédible doit rester très haut. Tu ajustes la granularité, pas le classement global.
+- Chaque ajustement reste modéré (quelques points), l'objectif est de casser les égalités artificielles, pas de réécrire l'évaluation.
+- Scores entiers, plage 0-100.
+
+Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
+{"scores": {"<id>": <0-100>, ...}}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        temperature: 0.3,
+        messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Erreur API Anthropic (calibration) (${res.status}): ${await res.text()}`);
+
+    const json = await res.json();
+    const raw: string = json.content?.[0]?.text ?? '';
+    const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+    const parsed = JSON.parse(cleaned) as { scores?: Record<string, number> };
+
+    const result: Record<string, number> = {};
+    for (const p of participants) {
+      const score = parsed.scores?.[p.userId];
+      result[p.userId] = typeof score === 'number' ? Math.max(0, Math.min(100, Math.round(score))) : p.initialScore;
+    }
+    return result;
+  } catch (err) {
+    console.warn('Calibration IA échouée, scores initiaux conservés', err);
+    return fallback;
+  }
+}
