@@ -225,6 +225,11 @@ GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulem
    8-16  : léger décalage
    0-7   : contradiction flagrante (ex : 10 % déclaré mais aucune définition visible, ou silhouette nettement plus grasse)
 
+RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
+- Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de sa photo). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Les bornes basses (0-9, 0-7, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
+- Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
+
 SCORE FINAL = somme des 4 rubriques (nombre entier, pas nécessairement rond).
 ${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
@@ -291,6 +296,11 @@ GRILLE DE SCORING — note chaque rubrique sur une échelle continue (pas seulem
    8-16  : doute léger sur la réutilisation
    0-7   : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU la silhouette contredit franchement la direction déclarée
 
+RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
+- Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de ses deux photos). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Les bornes basses (0-9, 0-7, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle, y compris pour la rubrique 5 (photo manifestement réutilisée) : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
+- Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
+
 SCORE FINAL = somme des 5 rubriques (nombre entier, pas nécessairement rond).
 ${egoBlock}
 Réponds UNIQUEMENT avec ce JSON, sans texte autour ni balises Markdown :
@@ -353,6 +363,11 @@ ${hasPrevPhoto
    8-16  : doute léger sur la réutilisation
    0-7   : photo manifestement réutilisée (pose, tenue, lumière et fond identiques) OU silhouette contredisant franchement la direction déclarée`
   : `   Tu n'as reçu qu'1 photo. N'applique PAS cette rubrique 5. Note uniquement les rubriques 1 à 4 (total /80) puis multiplie le score final par 1,25 pour le ramener sur 100.`}
+
+RÈGLE DE DIFFÉRENCIATION ET D'ANCRAGE — IMPORTANT
+- Ce participant a des chiffres réels qui lui sont propres (${dPoids}, ${dMG}, ${dMM}, ${mgPct} % ci-dessus, ainsi que le contenu visuel de ses photos). Pour chaque rubrique, situe d'abord la valeur réelle de CE participant dans la plage indiquée, puis choisis une note qui reflète précisément cette position — n'attribue jamais une note "par défaut" ou "ronde" parce que ça semble être un bon score global.
+- Les bornes basses (0-7, 0-4, etc.) restent pleinement utilisables en cas de contradiction nette ou d'impossibilité réelle, y compris pour la rubrique 5 (photo manifestement réutilisée) : la consigne de continuité porte sur la granularité à l'intérieur d'une tranche, pas sur un adoucissement des pénalités justifiées.
+- Avant de répondre, vérifie : si tu donnais ce même score à un participant dont ${dPoids}, ${dMG} ou ${dMM} seraient sensiblement différents, ce score serait-il toujours juste ? Si oui, c'est que tu n'as pas assez tenu compte des chiffres réels de CE participant — reprends rubrique par rubrique.
 
 SCORE FINAL = somme des rubriques applicables (voir condition rubrique 5), nombre entier pas nécessairement rond.
 ${egoBlock}
