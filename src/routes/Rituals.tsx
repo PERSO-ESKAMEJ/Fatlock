@@ -37,9 +37,12 @@ export default function Rituals() {
   const today = getTodayStr();
   const yesterday = getYesterdayStr();
 
-  const [viewingDay, setViewingDay] = useState<'today' | 'yesterday'>('today');
+  const [viewingDay, setViewingDay] = useState<'today' | 'yesterday' | 'other'>('today');
+  const [otherDate, setOtherDate] = useState(yesterday);
   const isYesterday = viewingDay === 'yesterday';
-  const activeDate = isYesterday ? yesterday : today;
+  const isOther = viewingDay === 'other';
+  const activeDate = isOther ? otherDate : isYesterday ? yesterday : today;
+  const isPast = activeDate !== today;
 
   const durationWeeks = challenge.durationWeeks ?? challenge.customSettings?.durationWeeks ?? 8;
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
@@ -48,13 +51,13 @@ export default function Rituals() {
   const customRituals = isCustom ? (challenge.customSettings?.rituals ?? []) : null;
 
   const todayConfirmed = isCodeConfirmed(challenge.groupCode, today);
-  // Hier est toujours accessible sans code — la journée est terminée
-  const unlocked = isYesterday || todayConfirmed;
+  // Toute journée passée est accessible sans code — la journée est terminée
+  const unlocked = isPast || todayConfirmed;
 
   const existingLog = getDailyLog(profile.id, activeDate);
 
   // Détermine le type de jour pour la date affichée
-  const dateObj = isYesterday ? new Date(yesterday + 'T12:00:00') : new Date();
+  const dateObj = isPast ? new Date(activeDate + 'T12:00:00') : new Date();
   const dow = dateObj.getDay();
   const dowMap: Record<number, keyof typeof profile.trainingDays> = {
     0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
@@ -152,15 +155,15 @@ export default function Rituals() {
         </div>
       </div>
 
-      {/* Sélecteur Aujourd'hui / Hier — Hier masqué si avant le J1 */}
+      {/* Sélecteur Aujourd'hui / Hier / Autre jour — masqués si avant le J1 */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setViewingDay('today'); }}
           className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
           style={{
-            background: !isYesterday ? 'var(--blue)' : 'var(--panel)',
-            color: !isYesterday ? 'white' : 'var(--muted)',
-            border: `1px solid ${!isYesterday ? 'var(--blue)' : 'var(--border)'}`,
+            background: viewingDay === 'today' ? 'var(--blue)' : 'var(--panel)',
+            color: viewingDay === 'today' ? 'white' : 'var(--muted)',
+            border: `1px solid ${viewingDay === 'today' ? 'var(--blue)' : 'var(--border)'}`,
           }}
         >
           Aujourd'hui
@@ -178,7 +181,31 @@ export default function Rituals() {
             Hier · {yesterday}
           </button>
         )}
+        <button
+          onClick={() => { setViewingDay('other'); }}
+          className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+          style={{
+            background: isOther ? 'var(--blue)' : 'var(--panel)',
+            color: isOther ? 'white' : 'var(--muted)',
+            border: `1px solid ${isOther ? 'var(--blue)' : 'var(--border)'}`,
+          }}
+        >
+          Autre jour
+        </button>
       </div>
+
+      {isOther && (
+        <div className="mb-4">
+          <input
+            type="date"
+            value={otherDate}
+            min={challenge.startDate}
+            max={yesterday >= challenge.startDate ? yesterday : challenge.startDate}
+            onChange={(e) => setOtherDate(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      )}
 
       {!unlocked ? (
         <div className="panel p-4 text-center" style={{ borderColor: 'var(--blue)' }}>
@@ -199,12 +226,12 @@ export default function Rituals() {
         </div>
       ) : (
         <>
-          {isYesterday && (
+          {isPast && (
             <div
               className="mb-3 px-3 py-2 rounded-lg text-xs"
               style={{ background: 'rgba(255,200,0,0.07)', border: '1px solid rgba(255,200,0,0.2)', color: 'var(--muted)' }}
             >
-              Tu remplis les rituels d'hier. L'IA compare tes déclarations à ta transformation hebdomadaire.
+              Tu remplis les rituels du {activeDate}. L'IA compare tes déclarations à ta transformation hebdomadaire.
             </div>
           )}
           <div className="space-y-2">
@@ -255,7 +282,7 @@ export default function Rituals() {
       {/* Métriques */}
       <div className="mt-6 panel p-4 space-y-3">
         <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
-          Métriques {isYesterday ? "d'hier" : 'du jour'}
+          Métriques {isPast ? `du ${activeDate}` : 'du jour'}
         </div>
         {trackWeight && (
           <div className="flex gap-2">
