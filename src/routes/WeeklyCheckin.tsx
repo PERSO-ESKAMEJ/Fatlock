@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfileStore } from '../store/useProfileStore';
 import { useLogStore } from '../store/useLogStore';
-import { getCurrentWeek, getChallengeState } from '../store/useChallengeStore';
-import { savePhoto } from '../lib/db';
+import { getCurrentWeek, getChallengeState, getChallengeEndDate } from '../store/useChallengeStore';
+import { savePhoto, getPhotosByWeek } from '../lib/db';
 import { buildWeeklyScore } from '../lib/scoring';
-import { BodyComposition } from '../types';
+import { generateRecapFile } from '../lib/recap';
+import { supabase } from '../lib/supabase';
+import { BodyComposition, WeeklyPhoto } from '../types';
 import PageWrapper from '../components/layout/PageWrapper';
 import BodyCompForm from '../components/weekly/BodyCompForm';
 import PhotoUploadCrop from '../components/weekly/PhotoUploadCrop';
@@ -47,6 +49,36 @@ export default function WeeklyCheckin() {
   function handleCompSave(comp: BodyComposition) {
     setSavedComp(comp);
     setStep(trackPhotos === 'disabled' ? 3 : 2);
+  }
+
+  async function pushRecapSilently() {
+    const sb = supabase();
+    if (!sb) return;
+    try {
+      const allPhotos: WeeklyPhoto[] = [];
+      for (let w = 0; w <= targetWeek; w++) {
+        const p = await getPhotosByWeek(profile.id, w);
+        if (p) allPhotos.push(p);
+      }
+      const challengeEnd = getChallengeEndDate(challenge.startDate, durationWeeks);
+      const { dailyLogs: freshLogs, bodyCompositions: freshComps, weeklyScores: freshScores } = useLogStore.getState();
+      const recap = await generateRecapFile(
+        profile,
+        challenge.id,
+        targetWeek,
+        freshLogs.filter((l) => l.userId === profile.id && l.date >= challenge.startDate && l.date <= challengeEnd),
+        freshComps.filter((c) => c.userId === profile.id && c.weekNumber <= targetWeek),
+        allPhotos,
+        freshScores.filter((s) => s.userId === profile.id && s.weekNumber <= targetWeek),
+      );
+      const { weeklyPhotos: _photos, ...recapWithoutPhotos } = recap;
+      await sb.from('recaps').upsert(
+        { challenge_id: challenge.id, user_id: profile.id, week_number: targetWeek, exported_at: new Date().toISOString(), data: recapWithoutPhotos },
+        { onConflict: 'challenge_id,user_id,week_number' }
+      );
+    } catch (err) {
+      console.warn('[Fatlock] auto-push récap silencieux échoué', err);
+    }
   }
 
   async function handleConfirm() {
@@ -106,6 +138,9 @@ export default function WeeklyCheckin() {
 
       showToast(isBaseline ? 'Mesures de départ enregistrées !' : `Semaine ${targetWeek} validée !`, 'success');
       setStep(3);
+
+      // Push récap vers Supabase automatiquement (fire-and-forget, silencieux)
+      if (!isBaseline) void pushRecapSilently();
     } catch (err) {
       showToast('Erreur lors de la sauvegarde', 'error');
       console.error(err);
