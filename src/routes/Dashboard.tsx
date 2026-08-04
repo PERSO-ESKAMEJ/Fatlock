@@ -20,7 +20,7 @@ export default function Dashboard() {
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
   const s0Done = bodyComps.some((c) => c.weekNumber === 0);
-  const checkinDue = state === 'active' && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
+  const checkinDue = (state === 'active' || state === 'completed') && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
 
   const greeting = profile.sex === 'M'
     ? `Ton ego forge sa légende, ${profile.name}.`
@@ -90,6 +90,25 @@ export default function Dashboard() {
             {durationWeeks} semaines · {challenge.groupName}
           </h1>
         </div>
+
+        {/* Check-in final manquant — le challenge est terminé mais le check-in de la dernière semaine n'a pas été fait */}
+        {checkinDue && (
+          <div
+            className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, rgba(255,77,94,0.15), rgba(255,200,0,0.08))', border: '1px solid var(--red)' }}
+            onClick={() => navigate(`/checkin?week=${checkinWeek}`)}
+          >
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--red)' }}>
+                ⚠ Check-in Semaine {checkinWeek} manquant
+              </div>
+              <div className="text-sm text-[var(--muted)]">
+                Le challenge est terminé mais ton dernier check-in n'a pas été validé. Fais-le maintenant pour participer au vote final.
+              </div>
+            </div>
+            <span className="text-2xl flex-shrink-0">📸</span>
+          </div>
+        )}
 
         {/* Final vote CTA */}
         <div

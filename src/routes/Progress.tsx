@@ -23,7 +23,7 @@ export default function Progress() {
   const challengeState = getChallengeState(challenge.startDate, durationWeeks);
   const currentWeek = getCurrentWeek(challenge.startDate, durationWeeks);
   const checkinWeek = getCheckinWeek(challenge.startDate, durationWeeks);
-  const checkinDue = challengeState === 'active' && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
+  const checkinDue = (challengeState === 'active' || challengeState === 'completed') && checkinWeek >= 1 && !bodyComps.some((c) => c.weekNumber === checkinWeek);
   const [photos, setPhotos] = useState<(WeeklyPhoto | null)[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'weight' | 'body' | 'photos' | 'ai'>('weight');
