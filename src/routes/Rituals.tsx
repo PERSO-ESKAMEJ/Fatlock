@@ -135,6 +135,20 @@ export default function Rituals() {
     );
   }
 
+  if (challengeState === 'completed') {
+    return (
+      <PageWrapper>
+        <div className="panel p-8 text-center mt-8">
+          <div className="text-3xl mb-3">🏁</div>
+          <div className="font-bold text-[var(--ink)] mb-2">Challenge terminé</div>
+          <div className="text-sm text-[var(--muted)]">
+            Les rituels ne sont plus modifiables. Rends-toi sur le Vote Final pour clôturer le challenge.
+          </div>
+        </div>
+      </PageWrapper>
+    );
+  }
+
   return (
     <PageWrapper>
       {/* Header */}

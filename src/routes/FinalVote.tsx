@@ -16,6 +16,7 @@ import type {
   FinalAIVerdict,
   FinalResult,
   WeeklyPhoto,
+  RecapFile,
 } from '../types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -206,16 +207,43 @@ export default function FinalVote() {
       return;
     }
     if (entries.length === 0) { showToast('Génère d\'abord le classement dans Sync hebdo', 'error'); return; }
+    if (!sb) return;
     setGenerating(true);
     try {
-      const shuffled = [...entries].sort(() => Math.random() - 0.5);
+      // Seuls les participants ayant réellement enregistré leur check-in final (S{durationWeeks})
+      // sont proposés au vote — sinon il n'y a rien à comparer pour leur transformation.
+      const { data: recapRows } = await sb
+        .from('recaps')
+        .select('user_id, data')
+        .eq('challenge_id', challenge.id)
+        .eq('week_number', durationWeeks);
+      const finishedIds = new Set(
+        (recapRows ?? [])
+          .filter((r: { data: RecapFile & { bodyCompositions: { weekNumber: number }[] } }) =>
+            r.data.bodyCompositions?.some((c) => c.weekNumber === durationWeeks))
+          .map((r: { user_id: string }) => r.user_id)
+      );
+      // L'admin peut avoir fait son check-in localement sans que le push Supabase ait abouti
+      const { bodyCompositions: localComps } = useLogStore.getState();
+      if (localComps.some((c) => c.userId === profile.id && c.weekNumber === durationWeeks)) {
+        finishedIds.add(profile.id);
+      }
+
+      const eligibleEntries = entries.filter((e) => finishedIds.has(e.userId));
+      const skipped = entries.length - eligibleEntries.length;
+      if (eligibleEntries.length === 0) {
+        showToast('Aucun participant n\'a encore validé son check-in final', 'error');
+        return;
+      }
+
+      const shuffled = [...eligibleEntries].sort(() => Math.random() - 0.5);
       const cards: FinalTransformationCard[] = shuffled.map((e, i) => ({
         userId: e.userId,
         anonymousId: generateAnonymousName(i),
       }));
 
       const credAvgs: Record<string, number> = {};
-      for (const entry of entries) {
+      for (const entry of eligibleEntries) {
         const userAI = aiResults.filter(r => r.userId === entry.userId);
         if (userAI.length > 0) {
           credAvgs[entry.userId] = userAI.reduce((s, r) => s + r.credibilityScore, 0) / userAI.length;
@@ -233,7 +261,12 @@ export default function FinalVote() {
 
       await pushPackage(newPkg);
       setPkg(newPkg);
-      showToast('Vote final lancé !', 'success');
+      showToast(
+        skipped > 0
+          ? `Vote final lancé — ${skipped} participant(s) exclu(s) (check-in S${durationWeeks} manquant)`
+          : 'Vote final lancé !',
+        'success'
+      );
     } catch (err) {
       showToast('Erreur lors de la génération', 'error');
       console.error(err);
@@ -383,7 +416,7 @@ export default function FinalVote() {
             <>
               <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
                 Chaque participant choisira la transformation S0→S{durationWeeks} la plus marquante. Les noms sont masqués pendant le vote.
-                Assure-toi d'avoir généré le classement d'abord.
+                Assure-toi d'avoir généré le classement d'abord. Seuls les participants ayant validé leur check-in S{durationWeeks} seront proposés au vote.
               </p>
               <Button onClick={handleGeneratePackage} loading={generating} className="w-full">
                 Lancer le vote final
